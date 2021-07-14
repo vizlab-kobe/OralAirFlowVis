@@ -1,0 +1,73 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.3.1                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+6
+(
+    inlet
+    {
+        type            patch;
+        nFaces          151;
+        startFace       198811;
+    }
+    outlet
+    {
+        type            patch;
+        nFaces          0;
+        startFace       198962;
+    }
+    walls
+    {
+        type            patch;
+        nFaces          4095;
+        startFace       198962;
+    }
+    procBoundary24to8
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          2491;
+        startFace       203057;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        24;
+        neighbProcNo    8;
+    }
+    procBoundary24to32
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          1641;
+        startFace       205548;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        24;
+        neighbProcNo    32;
+    }
+    procBoundary24to40
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          3005;
+        startFace       207189;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        24;
+        neighbProcNo    40;
+    }
+)
+
+// ************************************************************************* //

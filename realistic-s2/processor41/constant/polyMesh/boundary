@@ -1,0 +1,95 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.3.1                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+8
+(
+    inlet
+    {
+        type            patch;
+        nFaces          0;
+        startFace       197736;
+    }
+    outlet
+    {
+        type            patch;
+        nFaces          308;
+        startFace       197736;
+    }
+    walls
+    {
+        type            patch;
+        nFaces          4992;
+        startFace       198044;
+    }
+    procBoundary41to17
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          633;
+        startFace       203036;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        41;
+        neighbProcNo    17;
+    }
+    procBoundary41to25
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          3185;
+        startFace       203669;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        41;
+        neighbProcNo    25;
+    }
+    procBoundary41to26
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          1258;
+        startFace       206854;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        41;
+        neighbProcNo    26;
+    }
+    procBoundary41to33
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          711;
+        startFace       208112;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        41;
+        neighbProcNo    33;
+    }
+    procBoundary41to42
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          1323;
+        startFace       208823;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        41;
+        neighbProcNo    42;
+    }
+)
+
+// ************************************************************************* //

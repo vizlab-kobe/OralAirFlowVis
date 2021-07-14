@@ -1,0 +1,150 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.3.1                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+13
+(
+    inlet
+    {
+        type            patch;
+        nFaces          0;
+        startFace       196493;
+    }
+    outlet
+    {
+        type            patch;
+        nFaces          156;
+        startFace       196493;
+    }
+    walls
+    {
+        type            patch;
+        nFaces          0;
+        startFace       196649;
+    }
+    procBoundary37to20
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          471;
+        startFace       196649;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        37;
+        neighbProcNo    20;
+    }
+    procBoundary37to21
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          992;
+        startFace       197120;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        37;
+        neighbProcNo    21;
+    }
+    procBoundary37to22
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          683;
+        startFace       198112;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        37;
+        neighbProcNo    22;
+    }
+    procBoundary37to28
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          48;
+        startFace       198795;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        37;
+        neighbProcNo    28;
+    }
+    procBoundary37to30
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          12;
+        startFace       198843;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        37;
+        neighbProcNo    30;
+    }
+    procBoundary37to36
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          7603;
+        startFace       198855;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        37;
+        neighbProcNo    36;
+    }
+    procBoundary37to38
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          7832;
+        startFace       206458;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        37;
+        neighbProcNo    38;
+    }
+    procBoundary37to44
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          360;
+        startFace       214290;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        37;
+        neighbProcNo    44;
+    }
+    procBoundary37to45
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          703;
+        startFace       214650;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        37;
+        neighbProcNo    45;
+    }
+    procBoundary37to46
+    {
+        type            processor;
+        inGroups        1(processor);
+        nFaces          126;
+        startFace       215353;
+        matchTolerance  0.0001;
+        transform       unknown;
+        myProcNo        37;
+        neighbProcNo    46;
+    }
+)
+
+// ************************************************************************* //
