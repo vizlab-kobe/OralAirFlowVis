@@ -45,6 +45,24 @@ KVS supports OSMesa and MPI needs to be installed.
     $ make install
     ```
 
+### InSituVis
+InSituVis is required.
+
+1. Get the InSituVis source codes from the GitHub repository as follows:
+    ```
+    $ git clone https://github.com/vizlab-kobe/InSituVis.git
+    ```
+
+2. Move to Lib directory.
+    ```
+    $ cd InSituVis/Lib
+    ```
+
+3. Compile the InSituVis library.
+    ```
+    $ ./kvsmake.py
+    ```
+
 ### OpenFOAM
 OpenFOAM 2.3.1 is required.
 
@@ -67,16 +85,16 @@ OpenFOAM 2.3.1 is required.
 
 ## Execution
 
-### InSituVis
+### OralAirFlowVis
 
-1. Get the InSituVis source codes from the GitHub repository as follows:
+1. Get the OralAirFlowVis source codes from the GitHub repository as follows:
     ```
-    $ git clone https://github.com/vizlab-kobe/InSituVis.git
+    $ git clone https://github.com/vizlab-kobe/OralAirFlowVis.git
     ```
 
-2. Move to the application directory.
+2. Move to the OralAirFlowVis directory.
     ```
-    $ cd App/OralAirflow
+    $ cd OralAirflowVis
     ```
 
 ### rhoPimpleFoam_InSituVis
