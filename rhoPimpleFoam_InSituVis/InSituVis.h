@@ -17,11 +17,18 @@
 #include <InSituVis/Lib/SphericalViewpoint.h>
 
 
-#define IN_SITU_VIS__ADAPTIVE_TIMESTEP_CONTROLL
+//#define IN_SITU_VIS__ADAPTIVE_TIMESTEP_CONTROLL
+//#define IN_SITU_VIS__STOCHASTIC_RENDERING
 
 #if defined( IN_SITU_VIS__ADAPTIVE_TIMESTEP_CONTROLL )
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
+#elif defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
+#include <InSituVis/Lib/StochasticRenderingAdaptor.h>
+#include <kvs/StochasticLineRenderer>
+#include <kvs/ParticleBasedRenderer>
+#include <kvs/CellByCellMetropolisSampling>
+namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #else
 namespace { using Adaptor = InSituVis::mpi::Adaptor; }
 #endif
@@ -40,6 +47,9 @@ class InSituVis : public ::Adaptor
 public:
     static Pipeline OrthoSlice();
     static Pipeline Isosurface();
+#if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
+    static Pipeline ParticleBasedRendering( const size_t repeats );
+#endif
 
 private:
     kvs::PolygonObject m_boundary_mesh; ///< boundary mesh
@@ -55,6 +65,7 @@ public:
         enum { Single, Dist } viewpoint_type = Single; // 'Single' or 'Dist'
         //enum { Single, Dist } viewpoint_type = Dist; // 'Single' or 'Dist'
         this->setImageSize( 1024, 1024 );
+        //this->setImageSize( 512, 512 );
         this->setOutputImageEnabled( true );
         this->setOutputSubImageEnabled( false, false, false ); // color, depth, alpha
         //this->setOutputSubImageEnabled( true, true, true ); // color, depth, alpha
@@ -68,6 +79,11 @@ public:
 #endif
 
         // Set visualization pipeline.
+#if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
+        const size_t repeats = 100;
+        this->setRepetitionLevel( repeats );
+        this->setPipeline( local::InSituVis::ParticleBasedRendering( repeats ) );
+#else
         switch ( pipeline_type )
         {
         case Ortho:
@@ -78,6 +94,7 @@ public:
             break;
         default: break;
         }
+#endif
 
         // Set viewpoint(s)
         switch ( viewpoint_type )
@@ -116,10 +133,19 @@ public:
             if ( m_boundary_mesh.numberOfVertices() > 0 )
             {
                 // Register the bounding box at the root rank.
+#if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
+                /*
+                kvs::Bounds bounds( kvs::RGBColor::Black(), 1.0f );
+                auto* object = bounds.outputLineObject( &m_boundary_mesh );
+                auto* renderer = new kvs::StochasticLineRenderer();
+                BaseClass::screen().registerObject( object, renderer );
+                */
+#else
                 auto* object = new kvs::PolygonObject();
                 object->shallowCopy( m_boundary_mesh );
                 object->setName( "BoundaryMesh" );
                 BaseClass::screen().registerObject( object, new kvs::Bounds() );
+#endif
             }
         }
 
@@ -270,5 +296,56 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
         }
     };
 }
+
+#if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
+inline InSituVis::Pipeline InSituVis::ParticleBasedRendering( const size_t repeats )
+{
+    return [repeats] ( Screen& screen, const Object& object )
+    {
+        const auto& volume = dynamic_cast<const Volume&>( object );
+        if ( volume.numberOfCells() == 0 ) { return; }
+
+//        volume.print( std::cout << "VOLUME" << std::endl );
+
+        // Setup a transfer function.
+        auto c = kvs::ColorMap::CoolWarm( 255 );
+        auto o = kvs::OpacityMap( 255 );
+        o.addPoint( 0, 0 );
+//        o.addPoint( 200, 1 );
+//        o.addPoint( 220, 0 );
+        o.addPoint( 255, 1 );
+        o.create();
+
+        const auto min_value = volume.minValue();
+        const auto max_value = volume.maxValue();
+        auto t = kvs::TransferFunction( c );
+        t.setRange( min_value, max_value );
+
+        // Particle generation.
+        using Sampler = kvs::CellByCellMetropolisSampling;
+        const auto* camera = screen.scene()->camera();
+        const auto step = 0.001f;
+        auto* point = new Sampler( camera, &volume, repeats, step, t );
+        point->setName( volume.name() + "Object");
+
+//        point->print( std::cout << "POINT" << std::endl );
+
+        // Register object and renderer to screen
+        kvs::Light::SetModelTwoSide( true );
+        if ( screen.scene()->hasObject( volume.name() + "Object") )
+        {
+            // Update the objects.
+            screen.scene()->replaceObject( volume.name() + "Object", point );
+        }
+        else
+        {
+            // Register the objects with renderer.
+            auto* point_renderer = new kvs::glsl::ParticleBasedRenderer();
+            point_renderer->setTwoSideLightingEnabled( true );
+            screen.registerObject( point, point_renderer );
+        }
+    };
+}
+#endif
 
 } // end of namspace local
