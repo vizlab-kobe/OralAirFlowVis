@@ -26,6 +26,7 @@ namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
 #elif defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 #include <kvs/StochasticLineRenderer>
+#include <kvs/StochasticPolygonRenderer>
 #include <kvs/ParticleBasedRenderer>
 #include <kvs/CellByCellMetropolisSampling>
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
@@ -130,23 +131,31 @@ public:
     {
         if ( !BaseClass::screen().scene()->hasObject( "BoundaryMesh") )
         {
-            if ( m_boundary_mesh.numberOfVertices() > 0 )
-            {
-                // Register the bounding box at the root rank.
+            const bool visible = BaseClass::world().rank() == BaseClass::world().root ();
+            auto* object = new kvs::PolygonObject();
+            object->shallowCopy( m_boundary_mesh );
+            object->setName( "BoundaryMesh" );
+            object->setVisible( visible );
+
+            // Register the bounding box at the root rank.
 #if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
-                /*
-                kvs::Bounds bounds( kvs::RGBColor::Black(), 1.0f );
-                auto* object = bounds.outputLineObject( &m_boundary_mesh );
-                auto* renderer = new kvs::StochasticLineRenderer();
-                BaseClass::screen().registerObject( object, renderer );
-                */
+            // Bounding box
+            kvs::Bounds bounds( kvs::RGBColor::Black(), 1.0f );
+            auto* o = bounds.outputLineObject( object );
+            o->setVisible( object->isVisible() );
+            auto* r = new kvs::StochasticLineRenderer();
+            BaseClass::screen().registerObject( o, r );
+
+            // Boundary mesh
+            object->setOpacity( 30 );
+            auto* renderer = new kvs::StochasticPolygonRenderer();
+            renderer->setTwoSideLightingEnabled( true );
+            BaseClass::screen().registerObject( object, renderer );
 #else
-                auto* object = new kvs::PolygonObject();
-                object->shallowCopy( m_boundary_mesh );
-                object->setName( "BoundaryMesh" );
-                BaseClass::screen().registerObject( object, new kvs::Bounds() );
+            // Bounding box
+            auto* renderer = new kvs::Bounds();
+            BaseClass::screen().registerObject( object, renderer );
 #endif
-            }
         }
 
         BaseClass::exec( sim_time );
@@ -154,10 +163,18 @@ public:
 
     void importBoundaryMesh( const std::string& filename )
     {
-        if ( BaseClass::world().rank() == BaseClass::world().root () )
-        {
-            m_boundary_mesh = kvs::PolygonImporter( filename );
-        }
+        m_boundary_mesh = kvs::PolygonImporter( filename );
+
+        // Scaling coordinate values of the boundary object adjusing to
+        // the coordinate scale of the volume dataset.
+        const auto scale = 1.0f / 1000.0f;
+        const auto min_coord = m_boundary_mesh.minObjectCoord() * scale;
+        const auto max_coord = m_boundary_mesh.maxObjectCoord() * scale;
+        auto coords = m_boundary_mesh.coords();
+        for ( auto& p : coords ) { p *= scale; }
+        m_boundary_mesh.setCoords( coords );
+        m_boundary_mesh.setMinMaxObjectCoords( min_coord, max_coord );
+        m_boundary_mesh.setMinMaxExternalCoords( min_coord, max_coord );
     }
 
     bool dump()
@@ -218,10 +235,19 @@ public:
 
 inline InSituVis::Pipeline InSituVis::OrthoSlice()
 {
-    return [&] ( Screen& screen, const Object& object )
+    return [&] ( Screen& screen, Object& object )
     {
-        const auto& volume = dynamic_cast<const Volume&>( object );
+        auto& volume = Volume::DownCast( object );
         if ( volume.numberOfCells() == 0 ) { return; }
+
+        const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
+        if ( mesh )
+        {
+            const auto min_coord = mesh->minExternalCoord();
+            const auto max_coord = mesh->maxExternalCoord();
+            volume.setMinMaxObjectCoords( min_coord, max_coord );
+            volume.setMinMaxExternalCoords( min_coord, max_coord );
+        }
 
         // Setup a transfer function.
         const auto min_value = volume.minValue();
@@ -262,10 +288,19 @@ inline InSituVis::Pipeline InSituVis::OrthoSlice()
 
 inline InSituVis::Pipeline InSituVis::Isosurface()
 {
-    return [&] ( Screen& screen, const Object& object )
+    return [&] ( Screen& screen, Object& object )
     {
-        const auto& volume = dynamic_cast<const Volume&>( object );
+        auto& volume = Volume::DownCast( object );
         if ( volume.numberOfCells() == 0 ) { return; }
+
+        const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
+        if ( mesh )
+        {
+            const auto min_coord = mesh->minExternalCoord();
+            const auto max_coord = mesh->maxExternalCoord();
+            volume.setMinMaxObjectCoords( min_coord, max_coord );
+            volume.setMinMaxExternalCoords( min_coord, max_coord );
+        }
 
         // Setup a transfer function.
         const auto min_value = volume.minValue();
@@ -300,35 +335,48 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
 #if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
 inline InSituVis::Pipeline InSituVis::ParticleBasedRendering( const size_t repeats )
 {
-    return [repeats] ( Screen& screen, const Object& object )
+    return [repeats] ( Screen& screen, Object& object )
     {
-        const auto& volume = dynamic_cast<const Volume&>( object );
+        auto& volume = Volume::DownCast( object );
         if ( volume.numberOfCells() == 0 ) { return; }
 
-//        volume.print( std::cout << "VOLUME" << std::endl );
+        const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
+        if ( mesh )
+        {
+            const auto min_coord = mesh->minExternalCoord();
+            const auto max_coord = mesh->maxExternalCoord();
+            volume.setMinMaxExternalCoords( min_coord, max_coord );
+        }
 
         // Setup a transfer function.
-        auto c = kvs::ColorMap::CoolWarm( 255 );
-        auto o = kvs::OpacityMap( 255 );
-        o.addPoint( 0, 0 );
-//        o.addPoint( 200, 1 );
-//        o.addPoint( 220, 0 );
-        o.addPoint( 255, 1 );
-        o.create();
-
         const auto min_value = volume.minValue();
         const auto max_value = volume.maxValue();
-        auto t = kvs::TransferFunction( c );
+
+        auto c = kvs::ColorMap::CoolWarm( 256 );
+        auto o = kvs::OpacityMap( 256, min_value, max_value );
+        o.addPoint( min_value, 0 );
+//        o.addPoint( 50, 0 );
+//        o.addPoint( 220, 0 );
+        o.addPoint( max_value, 1 );
+        o.create();
+
+        auto t = kvs::TransferFunction( c, o );
         t.setRange( min_value, max_value );
 
         // Particle generation.
         using Sampler = kvs::CellByCellMetropolisSampling;
         const auto* camera = screen.scene()->camera();
-        const auto step = 0.001f;
+        const auto step = 0.5f;
         auto* point = new Sampler( camera, &volume, repeats, step, t );
         point->setName( volume.name() + "Object");
 
-//        point->print( std::cout << "POINT" << std::endl );
+        if ( mesh )
+        {
+            const auto min_coord = mesh->minExternalCoord();
+            const auto max_coord = mesh->maxExternalCoord();
+            point->setMinMaxObjectCoords( min_coord, max_coord );
+            point->setMinMaxExternalCoords( min_coord, max_coord );
+        }
 
         // Register object and renderer to screen
         kvs::Light::SetModelTwoSide( true );
