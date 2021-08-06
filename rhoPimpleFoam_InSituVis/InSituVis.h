@@ -81,7 +81,7 @@ public:
 
         // Set visualization pipeline.
 #if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
-        const size_t repeats = 100;
+        const size_t repeats = 10;
         this->setRepetitionLevel( repeats );
         this->setPipeline( local::InSituVis::ParticleBasedRendering( repeats ) );
 #else
@@ -156,6 +156,30 @@ public:
             auto* renderer = new kvs::Bounds();
             BaseClass::screen().registerObject( object, renderer );
 #endif
+        }
+
+        const auto update_min_max_values = false;
+        if ( update_min_max_values )
+        {
+            auto min_value = Volume::DownCast( *BaseClass::objects().begin() )->minValue();
+            auto max_value = Volume::DownCast( *BaseClass::objects().begin() )->maxValue();
+            for ( auto& object : BaseClass::objects() )
+            {
+                auto* volume = Volume::DownCast( object.get() );
+                volume->updateMinMaxValues();
+
+                min_value = kvs::Math::Min( min_value, volume->minValue() );
+                max_value = kvs::Math::Max( max_value, volume->maxValue() );
+            }
+
+            BaseClass::world().allReduce( min_value, min_value, MPI_MIN );
+            BaseClass::world().allReduce( max_value, max_value, MPI_MAX );
+
+            for ( auto& object : BaseClass::objects() )
+            {
+                auto* volume = Volume::DownCast( object.get() );
+                volume->setMinMaxValues( min_value, max_value );
+            }
         }
 
         BaseClass::exec( sim_time );
@@ -249,10 +273,12 @@ inline InSituVis::Pipeline InSituVis::OrthoSlice()
             volume.setMinMaxExternalCoords( min_coord, max_coord );
         }
 
+
         // Setup a transfer function.
         const auto min_value = volume.minValue();
         const auto max_value = volume.maxValue();
-        auto t = kvs::TransferFunction( kvs::ColorMap::CoolWarm() );
+        //auto t = kvs::TransferFunction( kvs::ColorMap::CoolWarm() );
+        auto t = kvs::TransferFunction( kvs::ColorMap::BrewerSpectral() );
         t.setRange( min_value, max_value );
 
         // Create new slice objects.
@@ -305,7 +331,8 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
         // Setup a transfer function.
         const auto min_value = volume.minValue();
         const auto max_value = volume.maxValue();
-        auto t = kvs::TransferFunction( kvs::ColorMap::CoolWarm() );
+        //auto t = kvs::TransferFunction( kvs::ColorMap::CoolWarm() );
+        auto t = kvs::TransferFunction( kvs::ColorMap::BrewerSpectral() );
         t.setRange( min_value, max_value );
 
         // Create new object
@@ -352,21 +379,17 @@ inline InSituVis::Pipeline InSituVis::ParticleBasedRendering( const size_t repea
         const auto min_value = volume.minValue();
         const auto max_value = volume.maxValue();
 
-        auto c = kvs::ColorMap::CoolWarm( 256 );
-        auto o = kvs::OpacityMap( 256, min_value, max_value );
-        o.addPoint( min_value, 0 );
-//        o.addPoint( 50, 0 );
-//        o.addPoint( 220, 0 );
-        o.addPoint( max_value, 1 );
-        o.create();
-
-        auto t = kvs::TransferFunction( c, o );
+        //auto c = kvs::ColorMap::CoolWarm( 256 );
+        auto c = kvs::ColorMap::BrewerSpectral( 256 );
+        //auto o = kvs::OpacityMap( 256 );
+        //auto t = kvs::TransferFunction( c, o );
+        auto t = kvs::TransferFunction( c );
         t.setRange( min_value, max_value );
 
         // Particle generation.
         using Sampler = kvs::CellByCellMetropolisSampling;
         const auto* camera = screen.scene()->camera();
-        const auto step = 0.5f;
+        const auto step = 0.5f / 1000.0f;
         auto* point = new Sampler( camera, &volume, repeats, step, t );
         point->setName( volume.name() + "Object");
 

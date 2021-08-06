@@ -49,7 +49,7 @@ Description
 // IN_SITU_VIS__P: Pressure
 // IN_SITU_VIS__U: Velocity
 // IN_SITU_VIS__T: Temperature
-#define IN_SITU_VIS__T
+#define IN_SITU_VIS__P
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -150,8 +150,14 @@ int main(int argc, char *argv[])
         // Execute in-situ visualization process
 #if defined( IN_SITU_VIS__P ) // p: pressure
         auto& field = p;
-        const auto min_value = 9.94 * 10000.0;
-        const auto max_value = 1.02 * 100000.0;
+//        const auto min_value = 9.94 * 10000.0;
+//        const auto max_value = 1.02 * 100000.0;
+        // A
+        const auto min_value = 0.99998 * 100000.0;
+        const auto max_value = 1.02000 * 100000.0;
+        // B
+//        const auto min_value = 0.99998 * 100000.0;
+//        const auto max_value = 1.00002 * 100000.0;
 #elif defined( IN_SITU_VIS__U ) // U: velocity
         auto& field = U;
         const auto min_value = 0.0224;
