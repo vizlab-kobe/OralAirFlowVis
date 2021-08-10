@@ -5,6 +5,7 @@
 #include <kvs/PolygonRenderer>
 #include <kvs/PolygonImporter>
 #include <kvs/UnstructuredVolumeObject>
+#include <kvs/ExternalFaces>
 #include <kvs/Bounds>
 #include <kvs/String>
 #include <kvs/StampTimer>
@@ -48,6 +49,7 @@ class InSituVis : public ::Adaptor
 public:
     static Pipeline OrthoSlice();
     static Pipeline Isosurface();
+    static Pipeline Surface( const kvs::mpi::Communicator& world );
 #if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
     static Pipeline ParticleBasedRendering( const size_t repeats );
 #endif
@@ -62,13 +64,15 @@ public:
     InSituVis( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root )
     {
         // Common parameters.
-        enum { Ortho, Iso } pipeline_type = Ortho; // 'Ortho' or 'Iso'
+        //enum { Ortho, Iso, Surf } pipeline_type = Ortho; // 'Ortho', 'Iso' or 'Surf'
+        enum { Ortho, Iso, Surf } pipeline_type = Surf; // 'Ortho', 'Iso' or 'Surf'
         enum { Single, Dist } viewpoint_type = Single; // 'Single' or 'Dist'
         //enum { Single, Dist } viewpoint_type = Dist; // 'Single' or 'Dist'
         this->setImageSize( 1024, 1024 );
         //this->setImageSize( 512, 512 );
         this->setOutputImageEnabled( true );
         this->setOutputSubImageEnabled( false, false, false ); // color, depth, alpha
+        //this->setOutputSubImageEnabled( true, false, false ); // color, depth, alpha
         //this->setOutputSubImageEnabled( true, true, true ); // color, depth, alpha
 
         // Time intervals.
@@ -93,6 +97,9 @@ public:
         case Iso:
             this->setPipeline( local::InSituVis::Isosurface() );
             break;
+        case Surf:
+            this->setPipeline( local::InSituVis::Surface( BaseClass::world() ) );
+            break;
         default: break;
         }
 #endif
@@ -103,7 +110,8 @@ public:
         case Single:
         {
             using Viewpoint = ::InSituVis::Viewpoint;
-            auto location = Viewpoint::Location( {0, 0, 12} );
+            //auto location = Viewpoint::Location( {0, 0, 12} );
+            auto location = Viewpoint::Location( {-7, 10, 7} );
             auto vp = Viewpoint( location );
             this->setViewpoint( vp );
             break;
@@ -273,7 +281,6 @@ inline InSituVis::Pipeline InSituVis::OrthoSlice()
             volume.setMinMaxExternalCoords( min_coord, max_coord );
         }
 
-
         // Setup a transfer function.
         const auto min_value = volume.minValue();
         const auto max_value = volume.maxValue();
@@ -355,6 +362,47 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
             auto* renderer = new kvs::glsl::PolygonRenderer();
             renderer->setTwoSideLightingEnabled( true );
             screen.registerObject( surface, renderer );
+        }
+    };
+}
+
+inline InSituVis::Pipeline InSituVis::Surface( const kvs::mpi::Communicator& world )
+{
+    return [world] ( Screen& screen, Object& object )
+    {
+        auto& volume = Volume::DownCast( object );
+        if ( volume.numberOfCells() == 0 ) { return; }
+
+        const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
+        if ( mesh )
+        {
+            const auto min_coord = mesh->minExternalCoord();
+            const auto max_coord = mesh->maxExternalCoord();
+            volume.setMinMaxObjectCoords( min_coord, max_coord );
+            volume.setMinMaxExternalCoords( min_coord, max_coord );
+        }
+
+        const auto cmap = kvs::ColorMap::BrewerSpectral();
+        const auto ratio = float( world.rank() ) / ( world.size() - 1 );
+        const auto index = kvs::Math::Round( ( cmap.resolution() - 1 ) * ratio );
+        const auto color = cmap[ index ];
+
+        auto* faces = new kvs::ExternalFaces( &volume );
+        faces->setName( volume.name() + "Object");
+        faces->setColor( color );
+
+        kvs::Light::SetModelTwoSide( true );
+        if ( screen.scene()->hasObject( volume.name() + "Object") )
+        {
+            // Update the objects.
+            screen.scene()->replaceObject( volume.name() + "Object", faces );
+        }
+        else
+        {
+            // Register the objects with renderer.
+            auto* renderer = new kvs::glsl::PolygonRenderer();
+            renderer->setTwoSideLightingEnabled( true );
+            screen.registerObject( faces, renderer );
         }
     };
 }
