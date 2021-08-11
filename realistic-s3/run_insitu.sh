@@ -5,6 +5,7 @@ if [ -z $WM_DIR ]; then
     . ../etc/bashrc
 fi
 
+unset FOAM_SIGFPE
 mpirun -n 8 ../${PROGRAM}_InSituVis/$PROGRAM -parallel
 
 #if type "ffmpeg" > /dev/null 2>&1; then

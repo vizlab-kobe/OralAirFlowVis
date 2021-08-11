@@ -85,7 +85,7 @@ public:
 
         // Set visualization pipeline.
 #if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
-        const size_t repeats = 10;
+        const size_t repeats = 100;
         this->setRepetitionLevel( repeats );
         this->setPipeline( local::InSituVis::ParticleBasedRendering( repeats ) );
 #else
@@ -111,7 +111,7 @@ public:
         {
             using Viewpoint = ::InSituVis::Viewpoint;
             //auto location = Viewpoint::Location( {0, 0, 12} );
-            auto location = Viewpoint::Location( {-7, 10, 7} );
+            auto location = Viewpoint::Location( {-7, 7, 7} );
             auto vp = Viewpoint( location );
             this->setViewpoint( vp );
             break;
@@ -429,9 +429,13 @@ inline InSituVis::Pipeline InSituVis::ParticleBasedRendering( const size_t repea
 
         //auto c = kvs::ColorMap::CoolWarm( 256 );
         auto c = kvs::ColorMap::BrewerSpectral( 256 );
-        //auto o = kvs::OpacityMap( 256 );
-        //auto t = kvs::TransferFunction( c, o );
-        auto t = kvs::TransferFunction( c );
+        auto o = kvs::OpacityMap( 256 );
+        o.addPoint(   0, 0 );
+        o.addPoint(  10, 0 );
+        o.addPoint( 255, 1 );
+        o.create();
+        auto t = kvs::TransferFunction( c, o );
+        //auto t = kvs::TransferFunction( c );
         t.setRange( min_value, max_value );
 
         // Particle generation.
@@ -450,7 +454,7 @@ inline InSituVis::Pipeline InSituVis::ParticleBasedRendering( const size_t repea
         }
 
         // Register object and renderer to screen
-        kvs::Light::SetModelTwoSide( true );
+        //kvs::Light::SetModelTwoSide( true );
         if ( screen.scene()->hasObject( volume.name() + "Object") )
         {
             // Update the objects.
