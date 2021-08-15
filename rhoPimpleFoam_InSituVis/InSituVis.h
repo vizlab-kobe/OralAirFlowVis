@@ -5,6 +5,10 @@
 #include <kvs/PolygonRenderer>
 #include <kvs/PolygonImporter>
 #include <kvs/UnstructuredVolumeObject>
+#include <kvs/StochasticLineRenderer>
+#include <kvs/StochasticPolygonRenderer>
+#include <kvs/ParticleBasedRenderer>
+#include <kvs/CellByCellMetropolisSampling>
 #include <kvs/ExternalFaces>
 #include <kvs/Bounds>
 #include <kvs/String>
@@ -16,20 +20,26 @@
 #include <InSituVis/Lib/Viewpoint.h>
 #include <InSituVis/Lib/CubicViewpoint.h>
 #include <InSituVis/Lib/SphericalViewpoint.h>
-
-
-//#define IN_SITU_VIS__ADAPTIVE_TIMESTEP_CONTROLL
-//#define IN_SITU_VIS__STOCHASTIC_RENDERING
-
-#if defined( IN_SITU_VIS__ADAPTIVE_TIMESTEP_CONTROLL )
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
-namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
-#elif defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
-#include <kvs/StochasticLineRenderer>
-#include <kvs/StochasticPolygonRenderer>
-#include <kvs/ParticleBasedRenderer>
-#include <kvs/CellByCellMetropolisSampling>
+
+// Adaptor setting
+//#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
+//#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
+
+// Pipeline setting
+#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
+//#define IN_SITU_VIS__PIPELINE__ISOSURFACE
+//#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
+
+// Viewpoint setting
+#define IN_SITU_VIS__VIEWPOINT__SINGLE
+//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE
+
+
+#if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
+namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
+#elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #else
 namespace { using Adaptor = InSituVis::mpi::Adaptor; }
@@ -49,10 +59,8 @@ class InSituVis : public ::Adaptor
 public:
     static Pipeline OrthoSlice();
     static Pipeline Isosurface();
-    static Pipeline Surface( const kvs::mpi::Communicator& world );
-#if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
-    static Pipeline ParticleBasedRendering( const size_t repeats );
-#endif
+    static Pipeline ExternalFace( const kvs::mpi::Communicator& world );
+    static Pipeline StochasticRendering( const size_t repeats );
 
 private:
     kvs::PolygonObject m_boundary_mesh; ///< boundary mesh
@@ -64,10 +72,6 @@ public:
     InSituVis( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root )
     {
         // Common parameters.
-        //enum { Ortho, Iso, Surf } pipeline_type = Ortho; // 'Ortho', 'Iso' or 'Surf'
-        enum { Ortho, Iso, Surf } pipeline_type = Surf; // 'Ortho', 'Iso' or 'Surf'
-        enum { Single, Dist } viewpoint_type = Single; // 'Single' or 'Dist'
-        //enum { Single, Dist } viewpoint_type = Dist; // 'Single' or 'Dist'
         this->setImageSize( 1024, 1024 );
         //this->setImageSize( 512, 512 );
         this->setOutputImageEnabled( true );
@@ -77,58 +81,41 @@ public:
 
         // Time intervals.
         this->setAnalysisInterval( 3 ); // l: analysis time interval
-#if defined( IN_SITU_VIS__ADAPTIVE_TIMESTEP_CONTROLL )
+#if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
         this->setValidationInterval( 4 ); // L: validation time interval
         this->setSamplingGranularity( 2 ); // R: granularity for the pattern A
         this->setDivergenceThreshold( 0.01 );
 #endif
 
         // Set visualization pipeline.
-#if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
+#if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
         const size_t repeats = 100;
         this->setRepetitionLevel( repeats );
         this->setPipeline( local::InSituVis::ParticleBasedRendering( repeats ) );
-#else
-        switch ( pipeline_type )
-        {
-        case Ortho:
-            this->setPipeline( local::InSituVis::OrthoSlice() );
-            break;
-        case Iso:
-            this->setPipeline( local::InSituVis::Isosurface() );
-            break;
-        case Surf:
-            this->setPipeline( local::InSituVis::Surface( BaseClass::world() ) );
-            break;
-        default: break;
-        }
+#elif defined( IN_SITU_VIS__PIPELINE__ORTHO_SLICE )
+        this->setPipeline( local::InSituVis::OrthoSlice() );
+#elif defined( IN_SITU_VIS__PIPELINE__ISOSURFACE )
+        this->setPipeline( local::InSituVis::Isosurface() );
+#elif defined( IN_SITU_VIS__PIPELINE__EXTERNAL_FACE )
+        this->setPipeline( local::InSituVis::Surface( BaseClass::world() ) );
 #endif
 
         // Set viewpoint(s)
-        switch ( viewpoint_type )
-        {
-        case Single:
-        {
-            using Viewpoint = ::InSituVis::Viewpoint;
-            //auto location = Viewpoint::Location( {0, 0, 12} );
-            auto location = Viewpoint::Location( {-7, 7, 7} );
-            auto vp = Viewpoint( location );
-            this->setViewpoint( vp );
-            break;
-        }
-        case Dist:
-        {
-            using Viewpoint = ::InSituVis::CubicViewpoint;
-            auto dims = kvs::Vec3ui( 3, 3, 3 );
-            auto dir = Viewpoint::Direction::Uni;
-            auto vp = Viewpoint();
-            vp.setDims( dims );
-            vp.create( dir );
-            this->setViewpoint( vp );
-            break;
-        }
-        default: break;
-        }
+#if defined( IN_SITU_VIS__VIEWPOINT__SINGLE )
+        using Viewpoint = ::InSituVis::Viewpoint;
+        //auto location = Viewpoint::Location( {0, 0, 12} );
+        auto location = Viewpoint::Location( {-7, 7, 7} );
+        auto vp = Viewpoint( location );
+        this->setViewpoint( vp );
+#elif defined( IN_SITU_VIS__VIEWPOINT__SINGLE )
+        using Viewpoint = ::InSituVis::CubicViewpoint;
+        auto dims = kvs::Vec3ui( 3, 3, 3 );
+        auto dir = Viewpoint::Direction::Uni;
+        auto vp = Viewpoint();
+        vp.setDims( dims );
+        vp.create( dir );
+        this->setViewpoint( vp );
+#endif
     }
 
     kvs::mpi::StampTimer& simTimer() { return m_sim_timer; }
@@ -146,7 +133,7 @@ public:
             object->setVisible( visible );
 
             // Register the bounding box at the root rank.
-#if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
+#if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
             // Bounding box
             kvs::Bounds bounds( kvs::RGBColor::Black(), 1.0f );
             auto* o = bounds.outputLineObject( object );
@@ -267,9 +254,9 @@ public:
 
 inline InSituVis::Pipeline InSituVis::OrthoSlice()
 {
-    return [&] ( Screen& screen, Object& object )
+    return [&] ( Screen& screen, const Object& object )
     {
-        auto& volume = Volume::DownCast( object );
+        Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
 
         const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
@@ -321,9 +308,9 @@ inline InSituVis::Pipeline InSituVis::OrthoSlice()
 
 inline InSituVis::Pipeline InSituVis::Isosurface()
 {
-    return [&] ( Screen& screen, Object& object )
+    return [&] ( Screen& screen, const Object& object )
     {
-        auto& volume = Volume::DownCast( object );
+        Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
 
         const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
@@ -366,11 +353,11 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
     };
 }
 
-inline InSituVis::Pipeline InSituVis::Surface( const kvs::mpi::Communicator& world )
+inline InSituVis::Pipeline InSituVis::ExternalFace( const kvs::mpi::Communicator& world )
 {
-    return [world] ( Screen& screen, Object& object )
+    return [world] ( Screen& screen, const Object& object )
     {
-        auto& volume = Volume::DownCast( object );
+        Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
 
         const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
@@ -407,12 +394,11 @@ inline InSituVis::Pipeline InSituVis::Surface( const kvs::mpi::Communicator& wor
     };
 }
 
-#if defined( IN_SITU_VIS__STOCHASTIC_RENDERING )
-inline InSituVis::Pipeline InSituVis::ParticleBasedRendering( const size_t repeats )
+inline InSituVis::Pipeline InSituVis::StochasticRendering( const size_t repeats )
 {
-    return [repeats] ( Screen& screen, Object& object )
+    return [repeats] ( Screen& screen, const Object& object )
     {
-        auto& volume = Volume::DownCast( object );
+        Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
 
         const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
@@ -469,6 +455,5 @@ inline InSituVis::Pipeline InSituVis::ParticleBasedRendering( const size_t repea
         }
     };
 }
-#endif
 
 } // end of namspace local
