@@ -25,10 +25,10 @@
 
 // Adaptor setting
 //#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
-//#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
+#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 
 // Pipeline setting
-#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
+//#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
 //#define IN_SITU_VIS__PIPELINE__ISOSURFACE
 //#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
 
@@ -89,9 +89,9 @@ public:
 
         // Set visualization pipeline.
 #if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
-        const size_t repeats = 100;
+        const size_t repeats = 10;
         this->setRepetitionLevel( repeats );
-        this->setPipeline( local::InSituVis::ParticleBasedRendering( repeats ) );
+        this->setPipeline( local::InSituVis::StochasticRendering( repeats ) );
 #elif defined( IN_SITU_VIS__PIPELINE__ORTHO_SLICE )
         this->setPipeline( local::InSituVis::OrthoSlice() );
 #elif defined( IN_SITU_VIS__PIPELINE__ISOSURFACE )
@@ -103,8 +103,8 @@ public:
         // Set viewpoint(s)
 #if defined( IN_SITU_VIS__VIEWPOINT__SINGLE )
         using Viewpoint = ::InSituVis::Viewpoint;
-        //auto location = Viewpoint::Location( {0, 0, 12} );
-        auto location = Viewpoint::Location( {-7, 7, 7} );
+        //auto location = Viewpoint::Location( {0, 0, 12} ); // Default viewpoint
+        auto location = Viewpoint::Location( {7, 5, 6} );
         auto vp = Viewpoint( location );
         this->setViewpoint( vp );
 #elif defined( IN_SITU_VIS__VIEWPOINT__SINGLE )
@@ -148,8 +148,7 @@ public:
             BaseClass::screen().registerObject( object, renderer );
 #else
             // Bounding box
-            auto* renderer = new kvs::Bounds();
-            BaseClass::screen().registerObject( object, renderer );
+            BaseClass::screen().registerObject( object, new kvs::Bounds() );
 #endif
         }
 
@@ -276,32 +275,31 @@ inline InSituVis::Pipeline InSituVis::OrthoSlice()
         t.setRange( min_value, max_value );
 
         // Create new slice objects.
-        auto py = ( volume.minObjectCoord().y() + volume.maxObjectCoord().y() ) * 0.5f;
-        auto ay = kvs::OrthoSlice::YAxis;
-        auto* object_y = new kvs::OrthoSlice( &volume, py, ay, t );
-        object_y->setName( volume.name() + "ObjectY");
+        auto p0 = ( volume.minObjectCoord().y() + volume.maxObjectCoord().y() ) * 0.5f;
+        auto a0 = kvs::OrthoSlice::YAxis;
+        auto* object0 = new kvs::OrthoSlice( &volume, p0, a0, t );
+        object0->setName( volume.name() + "Object0");
 
-        auto pz = ( volume.minObjectCoord().z() + volume.maxObjectCoord().z() ) * 0.5f;
-        auto az = kvs::OrthoSlice::ZAxis;
-        auto* object_z = new kvs::OrthoSlice( &volume, pz, az, t );
-        object_z->setName( volume.name() + "ObjectZ");
+        auto p1 = ( volume.minObjectCoord().z() + volume.maxObjectCoord().z() ) * 0.5f;
+        auto a1 = kvs::OrthoSlice::ZAxis;
+        auto* object1 = new kvs::OrthoSlice( &volume, p1, a1, t );
+        object1->setName( volume.name() + "Object1");
 
-        kvs::Light::SetModelTwoSide( true );
-        if ( screen.scene()->hasObject( volume.name() + "ObjectY") )
+        if ( screen.scene()->hasObject( volume.name() + "Object0") )
         {
             // Update the objects.
-            screen.scene()->replaceObject( volume.name() + "ObjectY", object_y );
-            screen.scene()->replaceObject( volume.name() + "ObjectZ", object_z );
+            screen.scene()->replaceObject( volume.name() + "Object0", object0 );
+            screen.scene()->replaceObject( volume.name() + "Object1", object1 );
         }
         else
         {
             // Register the objects with renderer.
-            auto* renderer_y = new kvs::glsl::PolygonRenderer();
-            auto* renderer_z = new kvs::glsl::PolygonRenderer();
-            renderer_y->setTwoSideLightingEnabled( true );
-            renderer_z->setTwoSideLightingEnabled( true );
-            screen.registerObject( object_y, renderer_y );
-            screen.registerObject( object_z, renderer_z );
+            auto* renderer0 = new kvs::glsl::PolygonRenderer();
+            auto* renderer1 = new kvs::glsl::PolygonRenderer();
+            renderer0->setTwoSideLightingEnabled( true );
+            renderer1->setTwoSideLightingEnabled( true );
+            screen.registerObject( object0, renderer0 );
+            screen.registerObject( object1, renderer1 );
         }
     };
 }
@@ -330,25 +328,41 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
         t.setRange( min_value, max_value );
 
         // Create new object
-        auto i = kvs::Math::Mix( min_value, max_value, 0.5 );
         auto n = kvs::Isosurface::PolygonNormal;
         auto d = true;
-        auto* surface = new kvs::Isosurface( &volume, i, n, d, t );
-        surface->setName( volume.name() + "Object");
+        auto i0 = kvs::Math::Mix( min_value, max_value, 0.2 );
+        auto* object0 = new kvs::Isosurface( &volume, i0, n, d, t );
+        object0->setName( volume.name() + "Object0");
+
+        auto i1 = kvs::Math::Mix( min_value, max_value, 0.5 );
+        auto* object1 = new kvs::Isosurface( &volume, i1, n, d, t );
+        object1->setName( volume.name() + "Object1");
+
+        auto i2 = kvs::Math::Mix( min_value, max_value, 0.8 );
+        auto* object2 = new kvs::Isosurface( &volume, i2, n, d, t );
+        object2->setName( volume.name() + "Object2");
 
         // Register object and renderer to screen
         kvs::Light::SetModelTwoSide( true );
-        if ( screen.scene()->hasObject( volume.name() + "Object") )
+        if ( screen.scene()->hasObject( volume.name() + "Object0") )
         {
             // Update the objects.
-            screen.scene()->replaceObject( volume.name() + "Object", surface );
+            screen.scene()->replaceObject( volume.name() + "Object0", object0 );
+            screen.scene()->replaceObject( volume.name() + "Object1", object1 );
+            screen.scene()->replaceObject( volume.name() + "Object2", object2 );
         }
         else
         {
             // Register the objects with renderer.
-            auto* renderer = new kvs::glsl::PolygonRenderer();
-            renderer->setTwoSideLightingEnabled( true );
-            screen.registerObject( surface, renderer );
+            auto* renderer0 = new kvs::glsl::PolygonRenderer();
+            auto* renderer1 = new kvs::glsl::PolygonRenderer();
+            auto* renderer2 = new kvs::glsl::PolygonRenderer();
+            renderer0->setTwoSideLightingEnabled( true );
+            renderer1->setTwoSideLightingEnabled( true );
+            renderer2->setTwoSideLightingEnabled( true );
+            screen.registerObject( object0, renderer0 );
+            screen.registerObject( object1, renderer1 );
+            screen.registerObject( object2, renderer2 );
         }
     };
 }
@@ -378,7 +392,6 @@ inline InSituVis::Pipeline InSituVis::ExternalFace( const kvs::mpi::Communicator
         faces->setName( volume.name() + "Object");
         faces->setColor( color );
 
-        kvs::Light::SetModelTwoSide( true );
         if ( screen.scene()->hasObject( volume.name() + "Object") )
         {
             // Update the objects.
@@ -416,9 +429,13 @@ inline InSituVis::Pipeline InSituVis::StochasticRendering( const size_t repeats 
         //auto c = kvs::ColorMap::CoolWarm( 256 );
         auto c = kvs::ColorMap::BrewerSpectral( 256 );
         auto o = kvs::OpacityMap( 256 );
-        o.addPoint(   0, 0 );
-        o.addPoint(  10, 0 );
-        o.addPoint( 255, 1 );
+        o.addPoint(   0, 0.0 );
+        o.addPoint(  30, 0.0 );
+        o.addPoint(  50, 0.2 );
+        o.addPoint( 100, 0.3 );
+        o.addPoint( 240, 0.4 );
+//        o.addPoint( 245, 0.0 );
+        o.addPoint( 255, 0.0 );
         o.create();
         auto t = kvs::TransferFunction( c, o );
         //auto t = kvs::TransferFunction( c );
