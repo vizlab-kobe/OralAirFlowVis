@@ -1,6 +1,6 @@
 # In-situ Visualization for Oral Airflow Simulation based on OpenFOAM
 
-## Instaltion
+## Installation
 
 ### KVS
 KVS supports OSMesa and MPI needs to be installed.
@@ -68,7 +68,7 @@ OpenFOAM 2.3.1 is required.
 
 1. Get OpenFOAM 2.3.1 source codes from the following URL.
 
-    - [openfoam321.tar.gz](https://www.dropbox.com/s/aa8azaz2jt0inta/openfoam231.tar.gz?dl=0)
+    - [openfoam231.tar.gz](https://www.dropbox.com/s/aa8azaz2jt0inta/openfoam231.tar.gz?dl=0)
 
 2. Compile the OpenFOAM
     ```
@@ -81,6 +81,53 @@ OpenFOAM 2.3.1 is required.
     $ wclean &wmake 
     $ cd ../../../
     $ ./Allwmake
+    ```
+
+2.1. Modifications for Fugaku
+    ```
+    A) Edit "etc/config/settings.sh"
+
+       - Add "aarch64" for [case "$WM_ARCH" in]
+
+       aarch64)
+            WM_ARCH=linuxARM64
+            ;;
+
+       - Add "FJMPI" for [case "$WM_MPLIB" in]
+
+       FJMPI)
+         export FOAM_MPI=openmpi-system
+
+         export PINC="`mpiFCC --showme:compile`"
+         export PLIBS="`mpiFCC --showme:link`"
+         export PFLAGS="-DOMPI_SKIP_MPICXX"
+
+         libDir=`mpiFCC --showme:link | sed -e 's/.*-L\([^ ]*\).*/\1/'`
+         export MPI_ARCH_PATH="${libDir%/*}"
+
+         _foamAddLib     $libDir
+         unset libDir
+         ;;
+
+     B) Add "linuxARM64Fcc" to the [wmake/rules]
+
+        $ cp -r linux64Gcc linuxARM64Fcc
+
+        - Edit wmake/rules/linuxARM64Fcc
+
+          c++ : mpiFCC -std=c++98
+
+     C) Edit etc/bashrc
+
+        export WM_COMPILER=Fcc
+        export WM_MPLIB=FJMPI
+        export FOAM_SIGFPE=false
+
+        # Update Directory PATH
+        export WORK_DIR=OpenFOAM/Installed/Directory
+
+        foamInstall=$WORK_DIR/$WM_PROJECT
+        foamOldDirs="$FOAM_INST_DIR $WM_PROJECT_SITE $WORK_DIR/$WM_PROJECT/$USER"
     ```
 
 ## Execution
