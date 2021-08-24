@@ -83,7 +83,7 @@ OpenFOAM 2.3.1 is required.
     $ ./Allwmake
     ```
 
-2.1. Modifications for Fugaku
+3. Modifications for Fugaku
     ```
     A) Edit "etc/config/settings.sh"
 
