@@ -72,8 +72,8 @@ public:
     InSituVis( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root )
     {
         // Common parameters.
-        this->setImageSize( 1024, 1024 );
-        //this->setImageSize( 512, 512 );
+        //this->setImageSize( 1024, 1024 );
+        this->setImageSize( 512, 512 );
         this->setOutputImageEnabled( true );
         this->setOutputSubImageEnabled( false, false, false ); // color, depth, alpha
         //this->setOutputSubImageEnabled( true, false, false ); // color, depth, alpha
@@ -107,10 +107,12 @@ public:
         auto location = Viewpoint::Location( {7, 5, 6} );
         auto vp = Viewpoint( location );
         this->setViewpoint( vp );
-#elif defined( IN_SITU_VIS__VIEWPOINT__SINGLE )
+#elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
         using Viewpoint = ::InSituVis::CubicViewpoint;
+        //using Viewpoint = ::InSituVis::SphericalViewpoint;
         auto dims = kvs::Vec3ui( 3, 3, 3 );
         auto dir = Viewpoint::Direction::Uni;
+        //auto dir = Viewpoint::Direction::Omni;
         auto vp = Viewpoint();
         vp.setDims( dims );
         vp.create( dir );
@@ -145,6 +147,7 @@ public:
             object->setOpacity( 30 );
             auto* renderer = new kvs::StochasticPolygonRenderer();
             renderer->setTwoSideLightingEnabled( true );
+            renderer->setEdgeFactor( 0.6f );
             BaseClass::screen().registerObject( object, renderer );
 #else
             // Bounding box
@@ -186,13 +189,72 @@ public:
         // Scaling coordinate values of the boundary object adjusing to
         // the coordinate scale of the volume dataset.
         const auto scale = 1.0f / 1000.0f;
+        {
+            auto coords = m_boundary_mesh.coords();
+            for ( auto& p : coords ) { p *= scale; }
+            m_boundary_mesh.setCoords( coords );
+        }
+
         const auto min_coord = m_boundary_mesh.minObjectCoord() * scale;
         const auto max_coord = m_boundary_mesh.maxObjectCoord() * scale;
-        auto coords = m_boundary_mesh.coords();
-        for ( auto& p : coords ) { p *= scale; }
-        m_boundary_mesh.setCoords( coords );
         m_boundary_mesh.setMinMaxObjectCoords( min_coord, max_coord );
         m_boundary_mesh.setMinMaxExternalCoords( min_coord, max_coord );
+
+        // Removing x-max, y-min/max, z-min/max planes and setting normals.
+        {
+            auto v = m_boundary_mesh.coords();
+            std::vector<kvs::Real32> coords;
+            std::vector<kvs::Real32> normals;
+            for ( size_t i = 0; i < v.size() / 9; i++ )
+            {
+                const auto v0 = kvs::Vec3( v[9*i+0], v[9*i+1], v[9*i+2] );
+                const auto v1 = kvs::Vec3( v[9*i+3], v[9*i+4], v[9*i+5] );
+                const auto v2 = kvs::Vec3( v[9*i+6], v[9*i+7], v[9*i+8] );
+                const auto n0 = ( v1 - v0 ).cross( v2 - v0 ).normalized();
+
+                // x-max
+                if ( kvs::Math::Equal( max_coord.x(), v0.x() ) &&
+                     kvs::Math::Equal( max_coord.x(), v1.x() ) &&
+                     kvs::Math::Equal( max_coord.x(), v2.x() ) ) continue;
+                // y-min
+                if ( kvs::Math::Equal( min_coord.y(), v0.y() ) &&
+                     kvs::Math::Equal( min_coord.y(), v1.y() ) &&
+                     kvs::Math::Equal( min_coord.y(), v2.y() ) ) continue;
+
+                // y-max
+                if ( kvs::Math::Equal( max_coord.y(), v0.y() ) &&
+                     kvs::Math::Equal( max_coord.y(), v1.y() ) &&
+                     kvs::Math::Equal( max_coord.y(), v2.y() ) ) continue;
+
+                // z-min
+                if ( kvs::Math::Equal( min_coord.z(), v0.z() ) &&
+                     kvs::Math::Equal( min_coord.z(), v1.z() ) &&
+                     kvs::Math::Equal( min_coord.z(), v2.z() ) ) continue;
+
+                // z-max
+                if ( kvs::Math::Equal( max_coord.z(), v0.z() ) &&
+                     kvs::Math::Equal( max_coord.z(), v1.z() ) &&
+                     kvs::Math::Equal( max_coord.z(), v2.z() ) ) continue;
+
+                coords.push_back( v0.x() );
+                coords.push_back( v0.y() );
+                coords.push_back( v0.z() );
+
+                coords.push_back( v1.x() );
+                coords.push_back( v1.y() );
+                coords.push_back( v1.z() );
+
+                coords.push_back( v2.x() );
+                coords.push_back( v2.y() );
+                coords.push_back( v2.z() );
+
+                normals.push_back( n0.x() );
+                normals.push_back( n0.y() );
+                normals.push_back( n0.z() );
+            }
+            m_boundary_mesh.setCoords( kvs::ValueArray<kvs::Real32>( coords ) );
+            m_boundary_mesh.setNormals( kvs::ValueArray<kvs::Real32>( normals ) );
+        }
     }
 
     bool dump()
