@@ -22,6 +22,7 @@
 #include <InSituVis/Lib/SphericalViewpoint.h>
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
+#include <random>
 
 // Adaptor setting
 //#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
@@ -498,9 +499,10 @@ inline InSituVis::Pipeline InSituVis::ExternalFace( const kvs::mpi::Communicator
             volume.setMinMaxExternalCoords( min_coord, max_coord );
         }
 
-        const auto cmap = kvs::ColorMap::BrewerSpectral();
-        const auto ratio = float( world.rank() ) / ( world.size() - 1 );
-        const auto index = kvs::Math::Round( ( cmap.resolution() - 1 ) * ratio );
+        const auto cmap = kvs::ColorMap::BrewerSpectral( world.size() );
+        auto indices = kvs::ValueArray<int>::Linear( world.size() );
+        std::shuffle( indices.begin(), indices.end(), std::mt19937( 0 ) );
+        const auto index = indices[ world.rank() ];
         const auto color = cmap[ index ];
 
         auto* faces = new kvs::ExternalFaces( &volume );

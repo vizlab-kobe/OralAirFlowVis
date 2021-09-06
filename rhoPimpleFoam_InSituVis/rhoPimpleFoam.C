@@ -49,7 +49,7 @@ Description
 // IN_SITU_VIS__P: Pressure
 // IN_SITU_VIS__U: Velocity
 // IN_SITU_VIS__T: Temperature
-#define IN_SITU_VIS__T
+#define IN_SITU_VIS__P
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
