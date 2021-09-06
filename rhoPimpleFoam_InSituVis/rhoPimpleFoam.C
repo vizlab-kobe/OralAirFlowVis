@@ -150,25 +150,29 @@ int main(int argc, char *argv[])
         // Execute in-situ visualization process
 #if defined( IN_SITU_VIS__P ) // p: pressure
         auto& field = p;
-//        const auto min_value = 9.94 * 10000.0;
-//        const auto max_value = 1.02 * 100000.0;
         // A
 //        const auto min_value = 0.99998 * 100000.0;
 //        const auto max_value = 1.02000 * 100000.0;
         // B
-//        const auto min_value = 0.99998 * 100000.0;
-//        const auto min_value = 0.99999 * 100000.0;
+//        const auto min_value = 9.94 * 10000.0;
+//        const auto max_value = 1.02 * 100000.0;
         // C
         const auto min_value = 0.999999 * 100000.0;
         const auto max_value = 1.000020 * 100000.0;
 #elif defined( IN_SITU_VIS__U ) // U: velocity
         auto& field = U;
-        const auto min_value = 0.0224;
-        const auto max_value = 70.9;
+        // A (whole min/max values)
+        const auto min_value = 0.0;
+        const auto max_value = 71.645393372;
+//        const auto min_value = 0.0224;
+//        const auto max_value = 70.9;
 #elif defined( IN_SITU_VIS__T ) // T: temperature
         auto& field = thermo.T();
-        const auto min_value = 293.0;
-        const auto max_value = 295.0;
+        // A (whole min/max values)
+//        const auto min_value = 0.0;
+//        const auto max_value = 296.15917969;
+        const auto min_value = 290.0;
+        const auto max_value = 296.16;
 #endif
 
         // Convert OpenFOAM data to KVS data

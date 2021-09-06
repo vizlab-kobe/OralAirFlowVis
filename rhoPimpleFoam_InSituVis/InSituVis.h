@@ -25,16 +25,18 @@
 
 // Adaptor setting
 //#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
-#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
+//#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 
 // Pipeline setting
-//#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
+#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
 //#define IN_SITU_VIS__PIPELINE__ISOSURFACE
 //#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
 
 // Viewpoint setting
 #define IN_SITU_VIS__VIEWPOINT__SINGLE
 //#define IN_SITU_VIS__VIEWPOINT__MULTIPLE
+
+//#define IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES
 
 
 #if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
@@ -57,6 +59,7 @@ class InSituVis : public ::Adaptor
     using Screen = BaseClass::Screen;
 
 public:
+    static Pipeline WholeMinMaxValues();
     static Pipeline OrthoSlice();
     static Pipeline Isosurface();
     static Pipeline ExternalFace( const kvs::mpi::Communicator& world );
@@ -67,6 +70,8 @@ private:
     kvs::mpi::StampTimer m_sim_timer{ BaseClass::world() }; ///< timer for sim. process
     kvs::mpi::StampTimer m_cnv_timer{ BaseClass::world() }; ///< timer for cnv. process
     kvs::mpi::StampTimer m_vis_timer{ BaseClass::world() }; ///< timer for vis. process
+    kvs::Real64 m_whole_min_value = 0.0; ///< min. value of whole time-varying volume data
+    kvs::Real64 m_whole_max_value = 0.0; ///< max. value of whole time-varying volume data
 
 public:
     InSituVis( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root )
@@ -80,7 +85,7 @@ public:
         //this->setOutputSubImageEnabled( true, true, true ); // color, depth, alpha
 
         // Time intervals.
-        this->setAnalysisInterval( 3 ); // l: analysis time interval
+        this->setAnalysisInterval( 20 ); // l: analysis time interval
 #if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
         this->setValidationInterval( 4 ); // L: validation time interval
         this->setSamplingGranularity( 2 ); // R: granularity for the pattern A
@@ -97,7 +102,7 @@ public:
 #elif defined( IN_SITU_VIS__PIPELINE__ISOSURFACE )
         this->setPipeline( local::InSituVis::Isosurface() );
 #elif defined( IN_SITU_VIS__PIPELINE__EXTERNAL_FACE )
-        this->setPipeline( local::InSituVis::Surface( BaseClass::world() ) );
+        this->setPipeline( local::InSituVis::ExternalFace( BaseClass::world() ) );
 #endif
 
         // Set viewpoint(s)
@@ -105,6 +110,8 @@ public:
         using Viewpoint = ::InSituVis::Viewpoint;
         //auto location = Viewpoint::Location( {0, 0, 12} ); // Default viewpoint
         auto location = Viewpoint::Location( {7, 5, 6} );
+        //auto dir = Viewpoint::Direction::Omni;
+        //auto location = Viewpoint::Location( dir, {0, 0, 0} );
         auto vp = Viewpoint( location );
         this->setViewpoint( vp );
 #elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
@@ -152,32 +159,73 @@ public:
 #else
             // Bounding box
             BaseClass::screen().registerObject( object, new kvs::Bounds() );
+//            object->setVisible( false );
 #endif
         }
 
-        const auto update_min_max_values = false;
-        if ( update_min_max_values )
+#if defined( IN_SITU_VIS__UPDATE_MIN_MAX_VALUES )
+        // Update min/max values of the volume data in each time step.
+        auto min_value = Volume::DownCast( *BaseClass::objects().begin() )->minValue();
+        auto max_value = Volume::DownCast( *BaseClass::objects().begin() )->maxValue();
+        for ( auto& object : BaseClass::objects() )
         {
-            auto min_value = Volume::DownCast( *BaseClass::objects().begin() )->minValue();
-            auto max_value = Volume::DownCast( *BaseClass::objects().begin() )->maxValue();
-            for ( auto& object : BaseClass::objects() )
-            {
-                auto* volume = Volume::DownCast( object.get() );
-                volume->updateMinMaxValues();
+            auto* volume = Volume::DownCast( object.get() );
+            volume->updateMinMaxValues();
 
-                min_value = kvs::Math::Min( min_value, volume->minValue() );
-                max_value = kvs::Math::Max( max_value, volume->maxValue() );
-            }
-
-            BaseClass::world().allReduce( min_value, min_value, MPI_MIN );
-            BaseClass::world().allReduce( max_value, max_value, MPI_MAX );
-
-            for ( auto& object : BaseClass::objects() )
-            {
-                auto* volume = Volume::DownCast( object.get() );
-                volume->setMinMaxValues( min_value, max_value );
-            }
+            min_value = kvs::Math::Min( min_value, volume->minValue() );
+            max_value = kvs::Math::Max( max_value, volume->maxValue() );
         }
+
+        BaseClass::world().allReduce( min_value, min_value, MPI_MIN );
+        BaseClass::world().allReduce( max_value, max_value, MPI_MAX );
+
+        for ( auto& object : BaseClass::objects() )
+        {
+            auto* volume = Volume::DownCast( object.get() );
+            volume->setMinMaxValues( min_value, max_value );
+        }
+#endif
+
+#if defined( IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES )
+//        auto min_value = Volume::DownCast( *BaseClass::objects().begin() )->minValue();
+//        auto max_value = Volume::DownCast( *BaseClass::objects().begin() )->maxValue();
+        auto min_value = kvs::Value<kvs::Real64>::Max();
+        auto max_value = kvs::Value<kvs::Real64>::Min();
+        for ( auto& object : BaseClass::objects() )
+        {
+            auto* volume = Volume::DownCast( object.get() );
+            volume->updateMinMaxValues();
+
+            min_value = kvs::Math::Min( min_value, volume->minValue() );
+            max_value = kvs::Math::Max( max_value, volume->maxValue() );
+        }
+
+        BaseClass::world().allReduce( min_value, min_value, MPI_MIN );
+        BaseClass::world().allReduce( max_value, max_value, MPI_MAX );
+
+        for ( auto& object : BaseClass::objects() )
+        {
+            auto* volume = Volume::DownCast( object.get() );
+            volume->setMinMaxValues( min_value, max_value );
+        }
+
+        log() << "Min: " << min_value << std::endl;
+        log() << "Max: " << max_value << std::endl;
+
+        if ( sim_time.index == 1 )
+        {
+            m_whole_min_value = min_value;
+            m_whole_max_value = max_value;
+        }
+        else
+        {
+            m_whole_min_value = kvs::Math::Min( m_whole_min_value, min_value );
+            m_whole_max_value = kvs::Math::Max( m_whole_max_value, max_value );
+        }
+
+        log() << "Whole Min: " << m_whole_min_value << std::endl;
+        log() << "Whole Max: " << m_whole_max_value << std::endl;
+#endif
 
         BaseClass::exec( sim_time );
     }
@@ -260,6 +308,11 @@ public:
     bool dump()
     {
         if ( !BaseClass::dump() ) return false;
+
+#if defined( IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES )
+        log() << "Whole Min: " << m_whole_min_value << std::endl;
+        log() << "Whole Max: " << m_whole_max_value << std::endl;
+#endif
 
         // For each node
         m_sim_timer.setTitle( "Sim time" );
