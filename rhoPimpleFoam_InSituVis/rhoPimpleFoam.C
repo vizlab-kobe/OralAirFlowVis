@@ -151,8 +151,8 @@ int main(int argc, char *argv[])
 #if defined( IN_SITU_VIS__P ) // p: pressure
         auto& field = p;
         // A (whole min/max values)
-        const auto min_value = 97928.796875;
-        const auto max_value = 106227.53906;
+        //const auto min_value = 97928.796875;
+        //const auto max_value = 106227.53906;
 //        const auto min_value = 0.99998 * 100000.0;
 //        const auto max_value = 1.02000 * 100000.0;
         // B
@@ -161,6 +161,8 @@ int main(int argc, char *argv[])
         // C
 //        const auto min_value = 0.999999 * 100000.0;
 //        const auto max_value = 1.000020 * 100000.0;
+        const auto min_value = 0.999990 * 100000.0;
+        const auto max_value = 1.000200 * 100000.0;
 #elif defined( IN_SITU_VIS__U ) // U: velocity
         auto& field = U;
         // A (whole min/max values)

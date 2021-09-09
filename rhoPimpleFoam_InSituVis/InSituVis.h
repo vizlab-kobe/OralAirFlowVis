@@ -26,10 +26,10 @@
 
 // Adaptor setting
 //#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
-//#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
+#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 
 // Pipeline setting
-#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
+//#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
 //#define IN_SITU_VIS__PIPELINE__ISOSURFACE
 //#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
 
@@ -87,6 +87,7 @@ public:
 
         // Time intervals.
         this->setAnalysisInterval( 20 ); // l: analysis time interval
+//        this->setAnalysisInterval( 100 ); // l: analysis time interval
 #if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
         this->setValidationInterval( 4 ); // L: validation time interval
         this->setSamplingGranularity( 2 ); // R: granularity for the pattern A
@@ -95,7 +96,9 @@ public:
 
         // Set visualization pipeline.
 #if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
-        const size_t repeats = 10;
+        //const size_t repeats = 10;
+        const size_t repeats = 50;
+        //const size_t repeats = 100;
         this->setRepetitionLevel( repeats );
         this->setPipeline( local::InSituVis::StochasticRendering( repeats ) );
 #elif defined( IN_SITU_VIS__PIPELINE__ORTHO_SLICE )
@@ -112,7 +115,7 @@ public:
         //auto location = Viewpoint::Location( {0, 0, 12} ); // Default viewpoint
         auto location = Viewpoint::Location( {7, 5, 6} );
         //auto dir = Viewpoint::Direction::Omni;
-        //auto location = Viewpoint::Location( dir, {0, 0, 0} );
+        //auto location = Viewpoint::Location( dir, {-1, -0.4, 1} );
         auto vp = Viewpoint( location );
         this->setViewpoint( vp );
 #elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
@@ -188,8 +191,6 @@ public:
 #endif
 
 #if defined( IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES )
-//        auto min_value = Volume::DownCast( *BaseClass::objects().begin() )->minValue();
-//        auto max_value = Volume::DownCast( *BaseClass::objects().begin() )->maxValue();
         auto min_value = kvs::Value<kvs::Real64>::Max();
         auto max_value = kvs::Value<kvs::Real64>::Min();
         for ( auto& object : BaseClass::objects() )
@@ -427,7 +428,7 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
         Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
 
-        const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
+        auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
         if ( mesh )
         {
             const auto min_coord = mesh->minExternalCoord();
@@ -446,15 +447,15 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
         // Create new object
         auto n = kvs::Isosurface::PolygonNormal;
         auto d = true;
-        auto i0 = kvs::Math::Mix( min_value, max_value, 0.2 );
+        auto i0 = kvs::Math::Mix( min_value, max_value, 0.1 );
         auto* object0 = new kvs::Isosurface( &volume, i0, n, d, t );
         object0->setName( volume.name() + "Object0");
 
-        auto i1 = kvs::Math::Mix( min_value, max_value, 0.5 );
+        auto i1 = kvs::Math::Mix( min_value, max_value, 0.3 );
         auto* object1 = new kvs::Isosurface( &volume, i1, n, d, t );
         object1->setName( volume.name() + "Object1");
 
-        auto i2 = kvs::Math::Mix( min_value, max_value, 0.8 );
+        auto i2 = kvs::Math::Mix( min_value, max_value, 0.7 );
         auto* object2 = new kvs::Isosurface( &volume, i2, n, d, t );
         object2->setName( volume.name() + "Object2");
 
@@ -479,6 +480,12 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
             screen.registerObject( object0, renderer0 );
             screen.registerObject( object1, renderer1 );
             screen.registerObject( object2, renderer2 );
+
+            // Boundary mesh
+//            mesh->setOpacity( 30 );
+//            auto* renderer = new kvs::PolygonRenderer();
+//            renderer->setTwoSideLightingEnabled( true );
+//            screen.registerObject( mesh, renderer );
         }
     };
 }
@@ -550,8 +557,8 @@ inline InSituVis::Pipeline InSituVis::StochasticRendering( const size_t repeats 
         o.addPoint(  30, 0.0 );
         o.addPoint(  50, 0.2 );
         o.addPoint( 100, 0.3 );
-        o.addPoint( 240, 0.4 );
-//        o.addPoint( 245, 0.0 );
+        o.addPoint( 240, 0.2 );
+        o.addPoint( 245, 0.1 );
         o.addPoint( 255, 0.0 );
         o.create();
         auto t = kvs::TransferFunction( c, o );
