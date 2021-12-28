@@ -24,14 +24,15 @@
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 #include <random>
 #include "Adaptor_mpi.h"
+#include "TimestepControlledAdaptor_mpi.h"
 
 // Adaptor setting
-//#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
+#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
 //#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 
 // Pipeline setting
-#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
-//#define IN_SITU_VIS__PIPELINE__ISOSURFACE
+//#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
+#define IN_SITU_VIS__PIPELINE__ISOSURFACE
 //#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
 
 // Viewpoint setting
@@ -42,7 +43,7 @@
 
 
 #if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
-namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
+namespace { using Adaptor = local::mpi::TimestepControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #else
@@ -87,12 +88,10 @@ public:
         //this->setOutputSubImageEnabled( true, true, true ); // color, depth, alpha
 
         // Time intervals.
-        this->setAnalysisInterval( 20 ); // l: analysis time interval
-//        this->setAnalysisInterval( 100 ); // l: analysis time interval
+        this->setAnalysisInterval( 10 ); // l: analysis time interval
+        //this->setAnalysisInterval( 100 ); // l: analysis time interval
 #if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
-        this->setValidationInterval( 4 ); // L: validation time interval
-        this->setSamplingGranularity( 2 ); // R: granularity for the pattern A
-        this->setDivergenceThreshold( 0.01 );
+        this->setCalculationInterval( 30 ); // L: entropy calculation time interval
 #endif
 
         // Set visualization pipeline.
@@ -481,12 +480,12 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
             screen.registerObject( object0, renderer0 );
             screen.registerObject( object1, renderer1 );
             screen.registerObject( object2, renderer2 );
-
-            // Boundary mesh
-//            mesh->setOpacity( 30 );
-//            auto* renderer = new kvs::PolygonRenderer();
-//            renderer->setTwoSideLightingEnabled( true );
-//            screen.registerObject( mesh, renderer );
+            
+            //Boundary mesh
+            //mesh->setOpacity( 30 );
+            //auto* renderer = new kvs::PolygonRenderer();
+            //renderer->setTwoSideLightingEnabled( true );
+            //screen.registerObject( mesh, renderer );
         }
     };
 }

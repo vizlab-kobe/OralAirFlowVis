@@ -189,14 +189,16 @@ inline void Adaptor::execRendering()
     m_comp_time = 0.0f;
     float save_time = 0.0f;
     
-    kvs::ValueArray<size_t> max_index( { 0, 0, 0 } );
-    kvs::ValueArray<size_t> min_index( { 0, 0, 0 } );
-    kvs::ValueArray<float> max_value( { -1.0f, -1.0f, -1.0f } );
-    kvs::ValueArray<float> min_value( { -1.0f, -1.0f, -1.0f } );
+    size_t max_index = 0;
+    float max_value = -1;
+    //kvs::ValueArray<size_t> max_index( { 0, 0, 0 } );
+    //kvs::ValueArray<size_t> min_index( { 0, 0, 0 } );
+    //kvs::ValueArray<float> max_value( { -1.0f, -1.0f, -1.0f } );
+    //kvs::ValueArray<float> min_value( { -1.0f, -1.0f, -1.0f } );
 
     kvs::ValueArray<kvs::ColorImage> images( BaseClass::viewpoint().numberOfLocations() );
-    kvs::ValueArray<float> color_entropy( BaseClass::viewpoint().numberOfLocations() );
-    kvs::ValueArray<float> depth_entropy( BaseClass::viewpoint().numberOfLocations() );
+    //kvs::ValueArray<float> color_entropy( BaseClass::viewpoint().numberOfLocations() );
+    //kvs::ValueArray<float> depth_entropy( BaseClass::viewpoint().numberOfLocations() );
     kvs::ValueArray<float> entropy( BaseClass::viewpoint().numberOfLocations() );
 
     {
@@ -218,12 +220,18 @@ inline void Adaptor::execRendering()
                     const auto color_buffer = frame_buffer.color_buffer;
                     const auto depth_buffer = frame_buffer.depth_buffer;
                     kvs::ColorImage image( width, height, color_buffer );
-                    color_entropy[ index ] = calcColorEntropy( width, height, color_buffer, depth_buffer );
-                    depth_entropy[ index ] = calcDepthEntropy( width, height, depth_buffer );
+                    //color_entropy[ index ] = calcColorEntropy( width, height, color_buffer, depth_buffer );
+                    //depth_entropy[ index ] = calcDepthEntropy( width, height, depth_buffer );
+                    entropy[ index ] = calcDepthEntropy( width, height, depth_buffer );
                     images[ index ] = image;
-                    image.write( this->outputFinalImageName( location ) );
+                    //image.write( this->outputFinalImageName( location ) );
 
-                    if( ( max_value[0] < 0 ) || ( max_value[0] < color_entropy[ index ] ) )
+                    if( ( max_value < 0 ) || ( max_value < entropy[ index ] ) ){
+                        max_value = entropy[ index ];
+                        max_index = index;
+                    }
+
+                    /*if( ( max_value[0] < 0 ) || ( max_value[0] < color_entropy[ index ] ) )
                     {
                         max_value[0] = color_entropy[ index ];
                         max_index[0] = index;
@@ -242,17 +250,18 @@ inline void Adaptor::execRendering()
                     {
                         min_value[1] = depth_entropy[index];
                         min_index[1] = index;
-                    }
+                    }*/
                 }
             }
             timer.stop();
             save_time += BaseClass::saveTimer().time( timer );
         }
 
-        const float p = 0.5f;
+        /*const float p = 0.0f;
         for( size_t i = 0; i < BaseClass::viewpoint().numberOfLocations(); i++ )
         {
-            float norm_color_entropy = ( color_entropy[i] - min_value[0] ) / ( max_value[0] - min_value[0] );
+            //float norm_color_entropy = ( color_entropy[i] - min_value[0] ) / ( max_value[0] - min_value[0] );
+            float norm_color_entropy = 0.0f;
             float norm_depth_entropy = ( depth_entropy[i] - min_value[1] ) / ( max_value[1] - min_value[1] );
             entropy[i] = p * norm_color_entropy + ( 1.0f - p ) * norm_depth_entropy;
             if( ( max_value[2] < 0 ) || ( max_value[2] < entropy[i] ) )
@@ -265,21 +274,25 @@ inline void Adaptor::execRendering()
                 min_value[2] = entropy[i];
                 min_index[2] = i;
             }
+        }*/
+
+        setIndex( max_index ); 
+        if ( m_world.rank() == m_world.root() ){
+            const auto time = BaseClass::timeStep();
+            const auto space = max_index;
+            const auto output_time = kvs::String::From( time, 6, '0' );
+            const auto output_space = kvs::String::From( space, 6, '0' );
+            const auto output_basename = BaseClass::outputFilename();
+            const auto output_filename = output_basename + "_" + output_time + "_" + output_space;
+            const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".bmp";
+            images[ space ].write( filename );
         }
 
-        const auto time = BaseClass::timeStep();
-        const auto space = max_index[2];
-        const auto output_time = kvs::String::From( time, 6, '0' );
-        const auto output_space = kvs::String::From( space, 6, '0' );
-        const auto output_basename = BaseClass::outputFilename();
-        const auto output_filename = "best_" + output_basename + "_" + output_time + "_" + output_space;
-        const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".bmp";
-        images[ space ].write( filename );
-
+        /*
         //const auto m_dims = BaseClass::viewpoint().dims();
         const auto num_x = 18;
         const auto num_y = 9;
-        const size_t l = 10;
+        const size_t l = 16;
         const size_t width = ( 1 + l ) * num_x + 1;
         const size_t height = ( 1 + l ) * num_y + 1;
         kvs::ColorImage heatmap( width, height );
@@ -292,8 +305,8 @@ inline void Adaptor::execRendering()
         for( size_t y = 0; y < num_y; y++ ){
             for( size_t x =0; x < num_x; x++ ){
                 for( size_t i = 0; i < ( 1 + l ); i++ ){
-                    heatmap.setPixel( ( 1 + l ) * x + i, ( 1 + l ) * y, kvs::RGBColor( 0, 0, 0 ) );
-                    heatmap.setPixel( ( 1 + l ) * x, ( 1 + l ) * y + i, kvs::RGBColor( 0, 0, 0 ) );
+                    heatmap.setPixel( ( 1 + l ) * x + i, ( 1 + l ) * y, kvs::RGBColor::Black() );
+                    heatmap.setPixel( ( 1 + l ) * x, ( 1 + l ) * y + i, kvs::RGBColor::Black() );
                 }
                 auto e = entropy[ y * num_x + x ];
                 if ( !( e > min_value[2] && max_value[2] > e ) )
@@ -321,6 +334,56 @@ inline void Adaptor::execRendering()
         const auto output_filename_heatmap = "heatmap_entropy_" + output_time;
         const auto filename_heatmap = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename_heatmap + ".bmp";
         heatmap.write( filename_heatmap );
+        */
+    }
+    BaseClass::saveTimer().stamp( save_time );
+    BaseClass::rendTimer().stamp( m_rend_time );
+    m_comp_timer.stamp( m_comp_time );
+}
+
+inline void Adaptor::execRenderingAt( const size_t i )
+{
+    
+    m_rend_time = 0.0f;
+    m_comp_time = 0.0f;
+    float save_time = 0.0f;
+
+    kvs::ValueArray<kvs::ColorImage> images( BaseClass::viewpoint().numberOfLocations() );
+
+    {
+        for ( const auto& location : BaseClass::viewpoint().locations() )
+        {
+            auto frame_buffer = this->readback( location );
+            
+            kvs::Timer timer( kvs::Timer::Start );
+            
+            if ( m_world.rank() == m_world.root() )
+            {
+                if ( BaseClass::isOutputImageEnabled() )
+                {
+                    const auto size = BaseClass::outputImageSize( location );
+                    const auto index = location.index;
+                    const auto width = size.x();
+                    const auto height = size.y();
+                    const auto color_buffer = frame_buffer.color_buffer;
+                    kvs::ColorImage image( width, height, color_buffer );
+                    images[index] = image;
+                }
+            }
+            
+            timer.stop();
+            save_time += BaseClass::saveTimer().time( timer );
+        }
+        
+        if( m_world.rank() == m_world.root() )
+        {
+            const auto time = BaseClass::timeStep();
+            const auto output_time = kvs::String::From( time, 6, '0' );
+            const auto output_basename = BaseClass::outputFilename();
+            const auto output_filename = output_basename + "_" + output_time;
+            const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".bmp";
+            images[i].write( filename );
+        }
     }
     BaseClass::saveTimer().stamp( save_time );
     BaseClass::rendTimer().stamp( m_rend_time );

@@ -53,6 +53,7 @@ private:
     float m_rend_time = 0.0f; ///< rendering time per frame
     float m_comp_time = 0.0f; ///< image composition time per frame
     kvs::mpi::StampTimer m_comp_timer{ m_world }; ///< timer for image composition process
+    size_t m_index = 0;
 
 public:
     Adaptor( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): m_world( world, root ) {}
@@ -75,12 +76,15 @@ public:
 
 protected:
     virtual void execRendering();
+    virtual void execRenderingAt( const size_t i );
     virtual FrameBuffer drawScreen( std::function<void(const FrameBuffer&)> func = [] ( const FrameBuffer& ) {} );
 
     float rendTime() const { return m_rend_time; }
     float compTime() const { return m_comp_time; }
+    size_t index() const { return m_index; }
     void setRendTime( const float time ) { m_rend_time = time; }
     void setCompTime( const float time ) { m_comp_time = time; }
+    void setIndex( const size_t index ) { m_index = index; }
 
     kvs::mpi::ImageCompositor& imageCompositor() { return m_image_compositor; }
     std::string outputFinalImageName( const InSituVis::Viewpoint::Location& location );
