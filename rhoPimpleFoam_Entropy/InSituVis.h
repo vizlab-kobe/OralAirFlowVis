@@ -20,11 +20,10 @@
 #include <InSituVis/Lib/Viewpoint.h>
 #include <InSituVis/Lib/CubicViewpoint.h>
 #include <InSituVis/Lib/SphericalViewpoint.h>
-#include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 #include <random>
-#include "Adaptor_mpi.h"
-#include "TimestepControlledAdaptor_mpi.h"
+#include <InSituVis/Lib/Adaptor_mpi.h>
+#include "EntropyControlledAdaptor_mpi.h"
 
 // Adaptor setting
 #define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
@@ -43,11 +42,11 @@
 
 
 #if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
-namespace { using Adaptor = local::mpi::TimestepControlledAdaptor; }
+namespace { using Adaptor = local::mpi::EntropyControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #else
-namespace { using Adaptor = local::mpi::Adaptor; }
+namespace { using Adaptor = InSituVis::mpi::Adaptor; }
 #endif
 
 
@@ -91,7 +90,7 @@ public:
         this->setAnalysisInterval( 10 ); // l: analysis time interval
         //this->setAnalysisInterval( 100 ); // l: analysis time interval
 #if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
-        this->setCalculationInterval( 30 ); // L: entropy calculation time interval
+        this->setEntropyInterval( 30 ); // L: entropy calculation time interval
 #endif
 
         // Set visualization pipeline.
