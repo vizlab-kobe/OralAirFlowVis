@@ -42,9 +42,9 @@ inline void TimestepControlledAdaptor::process( const Data& data , const InSituV
         BaseClass::tstepList().stamp( step );
 
         // Execute vis. pipeline and rendering.
-        BaseClass::execPipeline( data );
         const auto vp = BaseClass::viewpoint();
         BaseClass::setViewpoint( path );
+        BaseClass::execPipeline( data );
         BaseClass::execRenderingAt( i );
         BaseClass::setViewpoint( vp );
     }

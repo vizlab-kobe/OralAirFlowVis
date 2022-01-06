@@ -160,12 +160,15 @@ float calcColorEntropy( const size_t width, const size_t height, const kvs::Valu
 float calcDepthEntropy( const size_t width, const size_t height, const kvs::ValueArray<float>& depth_buffer )
 {
     kvs::ValueArray<size_t> histogram( 256 );
-    for( size_t i = 0; i < 256; i++ ){
+    for( size_t i = 0; i < 256; i++ )
+    {
         histogram[i] = 0;
     }
     size_t n = 0;
-    for( size_t i = 0; i < ( width * height ); i++ ){
-        if( depth_buffer[i] < 1 ){
+    for( size_t i = 0; i < ( width * height ); i++ )
+    {
+        if( depth_buffer[i] < 1 )
+        {
             const size_t j = depth_buffer[i] * 256;
             histogram[j] += 1;
             n += 1;
@@ -173,9 +176,11 @@ float calcDepthEntropy( const size_t width, const size_t height, const kvs::Valu
     }
 
     float entropy = 0.0;
-    for( size_t i = 0; i < 256; i++ ){
+    for( size_t i = 0; i < 256; i++ )
+    {
         const float p = static_cast<float>( histogram[i] ) / n;
-        if( p > 0 ){
+        if( p > 0 )
+        {
             entropy -= p * log( p ) / log( 2.0f );
         }
     }
@@ -191,14 +196,8 @@ inline void Adaptor::execRendering()
     
     size_t max_index = 0;
     float max_value = -1;
-    //kvs::ValueArray<size_t> max_index( { 0, 0, 0 } );
-    //kvs::ValueArray<size_t> min_index( { 0, 0, 0 } );
-    //kvs::ValueArray<float> max_value( { -1.0f, -1.0f, -1.0f } );
-    //kvs::ValueArray<float> min_value( { -1.0f, -1.0f, -1.0f } );
 
     kvs::ValueArray<kvs::ColorImage> images( BaseClass::viewpoint().numberOfLocations() );
-    //kvs::ValueArray<float> color_entropy( BaseClass::viewpoint().numberOfLocations() );
-    //kvs::ValueArray<float> depth_entropy( BaseClass::viewpoint().numberOfLocations() );
     kvs::ValueArray<float> entropy( BaseClass::viewpoint().numberOfLocations() );
 
     {
@@ -220,8 +219,6 @@ inline void Adaptor::execRendering()
                     const auto color_buffer = frame_buffer.color_buffer;
                     const auto depth_buffer = frame_buffer.depth_buffer;
                     kvs::ColorImage image( width, height, color_buffer );
-                    //color_entropy[ index ] = calcColorEntropy( width, height, color_buffer, depth_buffer );
-                    //depth_entropy[ index ] = calcDepthEntropy( width, height, depth_buffer );
                     entropy[ index ] = calcDepthEntropy( width, height, depth_buffer );
                     images[ index ] = image;
                     //image.write( this->outputFinalImageName( location ) );
@@ -230,54 +227,15 @@ inline void Adaptor::execRendering()
                         max_value = entropy[ index ];
                         max_index = index;
                     }
-
-                    /*if( ( max_value[0] < 0 ) || ( max_value[0] < color_entropy[ index ] ) )
-                    {
-                        max_value[0] = color_entropy[ index ];
-                        max_index[0] = index;
-                    }
-                    if( ( min_value[0] < 0 ) || ( min_value[0] > color_entropy[ index ] ) )
-                    {
-                        min_value[0] = color_entropy[index];
-                        min_index[0] = index;
-                    }
-                    if( ( max_value[1] < 0 ) || ( max_value[1] < depth_entropy[index] ) )
-                    {
-                        max_value[1] = depth_entropy[index];
-                        max_index[1] = index;
-                    }
-                    if( ( min_value[1] < 0 ) || ( min_value[1] > depth_entropy[index] ) )
-                    {
-                        min_value[1] = depth_entropy[index];
-                        min_index[1] = index;
-                    }*/
                 }
             }
             timer.stop();
             save_time += BaseClass::saveTimer().time( timer );
         }
 
-        /*const float p = 0.0f;
-        for( size_t i = 0; i < BaseClass::viewpoint().numberOfLocations(); i++ )
-        {
-            //float norm_color_entropy = ( color_entropy[i] - min_value[0] ) / ( max_value[0] - min_value[0] );
-            float norm_color_entropy = 0.0f;
-            float norm_depth_entropy = ( depth_entropy[i] - min_value[1] ) / ( max_value[1] - min_value[1] );
-            entropy[i] = p * norm_color_entropy + ( 1.0f - p ) * norm_depth_entropy;
-            if( ( max_value[2] < 0 ) || ( max_value[2] < entropy[i] ) )
-            {
-                max_value[2] = entropy[i];
-                max_index[2] = i;
-            }
-            if( ( min_value[2] < 0 ) || ( min_value[2] > entropy[i] ) )
-            {
-                min_value[2] = entropy[i];
-                min_index[2] = i;
-            }
-        }*/
-
         setIndex( max_index ); 
-        if ( m_world.rank() == m_world.root() ){
+        if ( m_world.rank() == m_world.root() )
+        {
             const auto time = BaseClass::timeStep();
             const auto space = max_index;
             const auto output_time = kvs::String::From( time, 6, '0' );
@@ -348,42 +306,34 @@ inline void Adaptor::execRenderingAt( const size_t i )
     m_comp_time = 0.0f;
     float save_time = 0.0f;
 
-    kvs::ValueArray<kvs::ColorImage> images( BaseClass::viewpoint().numberOfLocations() );
-
     {
-        for ( const auto& location : BaseClass::viewpoint().locations() )
+        const auto& location = BaseClass::viewpoint().at(i);
+        auto frame_buffer = this->readback( location );
+            
+        kvs::Timer timer( kvs::Timer::Start );
+
+        if ( m_world.rank() == m_world.root() )
         {
-            auto frame_buffer = this->readback( location );
-            
-            kvs::Timer timer( kvs::Timer::Start );
-            
-            if ( m_world.rank() == m_world.root() )
+            if ( BaseClass::isOutputImageEnabled() )
             {
-                if ( BaseClass::isOutputImageEnabled() )
-                {
-                    const auto size = BaseClass::outputImageSize( location );
-                    const auto index = location.index;
-                    const auto width = size.x();
-                    const auto height = size.y();
-                    const auto color_buffer = frame_buffer.color_buffer;
-                    kvs::ColorImage image( width, height, color_buffer );
-                    images[index] = image;
-                }
+                const auto size = BaseClass::outputImageSize( location );
+                const auto index = location.index;
+                const auto width = size.x();
+                const auto height = size.y();
+                const auto color_buffer = frame_buffer.color_buffer;
+                kvs::ColorImage image( width, height, color_buffer );
+                
+                const auto time = BaseClass::timeStep();
+                const auto output_time = kvs::String::From( time, 6, '0' );
+                const auto output_basename = BaseClass::outputFilename();
+                const auto output_filename = output_basename + "_" + output_time;
+                const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".bmp";
+                image.write( filename );
             }
-            
-            timer.stop();
-            save_time += BaseClass::saveTimer().time( timer );
         }
-        
-        if( m_world.rank() == m_world.root() )
-        {
-            const auto time = BaseClass::timeStep();
-            const auto output_time = kvs::String::From( time, 6, '0' );
-            const auto output_basename = BaseClass::outputFilename();
-            const auto output_filename = output_basename + "_" + output_time;
-            const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".bmp";
-            images[i].write( filename );
-        }
+
+        timer.stop();
+        save_time += BaseClass::saveTimer().time( timer );
     }
     BaseClass::saveTimer().stamp( save_time );
     BaseClass::rendTimer().stamp( m_rend_time );
@@ -484,7 +434,7 @@ inline Adaptor::FrameBuffer Adaptor::readback_uni_buffer( const InSituVis::Viewp
 {
     const auto p = location.position;
     const auto a = location.look_at;
-    const auto p_rtp = location.position_rtp;
+    const auto u = location.upVector;
     if ( p == a )
     {
         kvs::Timer timer_rend( kvs::Timer::Start );
@@ -505,24 +455,6 @@ inline Adaptor::FrameBuffer Adaptor::readback_uni_buffer( const InSituVis::Viewp
         const auto u0 = camera->upVector();
 
         //Draw the scene.
-        kvs::Vec3 pp_rtp;
-        if( p_rtp[1] > kvs::Math::pi / 2 ){
-            pp_rtp = p_rtp - kvs::Vec3( { 0, kvs::Math::pi / 2, 0 } );
-        }
-        else{
-            pp_rtp = p_rtp + kvs::Vec3( { 0, kvs::Math::pi / 2, 0 } );
-        }
-        const float pp_x = pp_rtp[0] * std::sin( pp_rtp[1] ) * std::sin( pp_rtp[2] );
-        const float pp_y = pp_rtp[0] * std::cos( pp_rtp[1] );
-        const float pp_z = pp_rtp[0] * std::sin( pp_rtp[1] ) * std::cos( pp_rtp[2] );
-        kvs::Vec3 pp;
-        if( p_rtp[1] > kvs::Math::pi / 2 ){
-            pp = kvs::Vec3( { pp_x, pp_y, pp_z } );
-        }
-        else{
-            pp = -1 * kvs::Vec3( { pp_x, pp_y, pp_z } );
-        }
-        const auto u = pp;
         camera->setPosition( p, a, u );
         light->setPosition( p );
         const auto buffer = this->drawScreen();
