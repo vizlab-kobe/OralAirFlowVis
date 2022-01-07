@@ -85,18 +85,67 @@ inline InSituVis::Viewpoint createPath(
             const auto angle = q_rot.angle();
             const auto da = angle / point_interval;
 
-            const auto pp_prv = position_prv + upVector_prv;
+            /*const auto pp_prv = position_prv + upVector_prv;
             const auto pp_crr = position_crr + upVector_crr;
             const auto pp_rot = kvs::Quaternion::RotationQuaternion( pp_prv, pp_crr );
             const auto pp_axis = pp_rot.axis();
             const auto pp_angle = pp_rot.angle();
-            const auto pp_da = pp_angle / point_interval;
+            const auto pp_da = pp_angle / point_interval;*/
             
             for( size_t i = 1; i < point_interval; i++ )
             {
                 const auto xyz = kvs::Quaternion::Rotate( position_prv, axis, da * i );
-                const auto pp = kvs::Quaternion::Rotate( pp_prv, pp_axis, pp_da * i );
-                const auto u = pp - xyz;
+
+                //calculate upVector
+                const float x = xyz[0];
+                const float y = xyz[1];
+                const float z = xyz[2];
+                float r, t, p;
+                r = sqrt( xyz.dot( xyz ) );
+                if( r == 0 ){
+                    t = 0;
+                    p = 0;
+                }
+                else{
+                    t = acos( y / r );
+                    if( ( x == 0 ) && ( z == 0 ) ){
+                        p = 0;
+                    }
+                    else{
+                        if( x >= 0 ){
+                            p = acos( z / sqrt( z * z + x * x ) );
+                        }
+                        else{
+                            p = -1 * acos( z / sqrt( z * z + x * x ) );
+                        }
+                    }
+                }
+                if( p < 0 ){
+                    p += 2 * kvs::Math::pi;
+                }
+                
+                auto rtp = kvs::Vec3( { r, t, p } );
+
+                kvs::Vec3 pp;
+                if( rtp[1] > kvs::Math::pi / 2 ){
+                    pp = rtp - kvs::Vec3( { 0, kvs::Math::pi / 2, 0 } );
+                }
+                else{
+                    pp = rtp + kvs::Vec3( { 0, kvs::Math::pi / 2, 0 } );
+                }
+                const float pp_x = pp[0] * std::sin( pp[1] ) * std::sin( pp[2] );
+                const float pp_y = pp[0] * std::cos( pp[1] );
+                const float pp_z = pp[0] * std::sin( pp[1] ) * std::cos( pp[2] );
+                kvs::Vec3 u;
+                if( rtp[1] > kvs::Math::pi / 2 ){
+                    u = kvs::Vec3( { pp_x, pp_y, pp_z } );
+                }
+                else{
+                    u = -1 * kvs::Vec3( { pp_x, pp_y, pp_z } );
+                }
+
+                //const auto pp = kvs::Quaternion::Rotate( pp_prv, pp_axis, pp_da * i );
+                //const auto u = pp - xyz;
                 path.add( { dir, xyz, u, l } );
             }
         }
