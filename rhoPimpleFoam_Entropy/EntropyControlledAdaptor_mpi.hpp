@@ -158,7 +158,7 @@ inline kvs::Vec3 EntropyControlledAdaptor::process( const Data& data )
     BaseClass::execPipeline( data );
     this->execRendering();
 
-    const auto u = BaseClass::viewpoint().at( Controller::maxIndex() ).upVector;
+    const auto u = BaseClass::viewpoint().at( Controller::maxIndex() ).up_vector;
     Controller::setCrrUpVector( u );
      
     return BaseClass::viewpoint().at( Controller::maxIndex() ).position;
