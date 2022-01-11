@@ -5,9 +5,33 @@ namespace local
 namespace mpi
 {
 
+inline void EntropyControlledAdaptor::setOutputEvaluationImageEnabled(
+    const bool enable,
+    const bool enable_depth )
+{
+    m_enable_output_evaluation_image = enable;
+    m_enable_output_evaluation_image_depth = enable_depth;
+}
+
 inline bool EntropyControlledAdaptor::isEntropyStep()
 {
     return BaseClass::timeStep() % ( BaseClass::analysisInterval() * Controller::entropyInterval() ) == 0;
+}
+
+inline bool EntropyControlledAdaptor::dump()
+{
+    bool ret = true;
+    if ( BaseClass::world().isRoot() )
+    {
+        if ( m_entr_timer.title().empty() ) { m_entr_timer.setTitle( "Ent time" ); }
+        kvs::StampTimerList timer_list;
+        timer_list.push( m_entr_timer );
+
+        const auto basedir = BaseClass::outputDirectory().baseDirectoryName() + "/";
+        ret = timer_list.write( basedir + "ent_proc_time.csv" );
+    }
+
+    return BaseClass::dump() && ret;
 }
 
 inline void EntropyControlledAdaptor::exec( const BaseClass::SimTime sim_time )
@@ -24,15 +48,17 @@ inline void EntropyControlledAdaptor::execRendering()
     BaseClass::setRendTime( 0.0f );
     BaseClass::setCompTime( 0.0f );
     float save_time = 0.0f;
-    
-    size_t max_index = 0;
-    float max_value = -1;
+    float entr_time = 0.0f;
 
-    kvs::ValueArray<kvs::ColorImage> images( BaseClass::viewpoint().numberOfLocations() );
-    kvs::ValueArray<float> entropy( BaseClass::viewpoint().numberOfLocations() );
+    float max_entropy = -1.0f;
+    int max_index = 0;
 
-    if( this->isEntropyStep() )
+    std::vector<float> entropies;
+    std::vector<BaseClass::FrameBuffer> frame_buffers;
+
+    if ( this->isEntropyStep() )
     {
+        // Entropy evaluation
         for ( const auto& location : BaseClass::viewpoint().locations() )
         {
             // Draw and readback framebuffer
@@ -40,74 +66,63 @@ inline void EntropyControlledAdaptor::execRendering()
 
             // Output framebuffer to image file at the root node
             kvs::Timer timer( kvs::Timer::Start );
-            if ( BaseClass::world().rank() == BaseClass::world().root() )
+            if ( BaseClass::world().isRoot() )
             {
-                if ( BaseClass::isOutputImageEnabled() )
-                {
-                    const auto size = BaseClass::outputImageSize( location );
-                    const auto index = location.index;
-                    const auto width = size.x();
-                    const auto height = size.y();
-                    const auto color_buffer = frame_buffer.color_buffer;
-                    const auto depth_buffer = frame_buffer.depth_buffer;
-                    kvs::ColorImage image( width, height, color_buffer );
-                    entropy[ index ] = Controller::DepthEntropy( width, height, color_buffer, depth_buffer );
-                    images[ index ] = image;
-                    //image.write( this->outputFinalImageName( location ) );
+                const auto entropy = Controller::entropy( frame_buffer );
+                entropies.push_back( entropy );
+                frame_buffers.push_back( frame_buffer );
 
-                    if( ( max_value < 0 ) || ( max_value < entropy[ index ] ) ){
-                        max_value = entropy[ index ];
-                        max_index = index;
-                    }
+                if ( entropy > max_entropy )
+                {
+                    max_entropy = entropy;
+                    max_index = location.index;
                 }
             }
             timer.stop();
-            save_time += BaseClass::saveTimer().time( timer );
+            entr_time += BaseClass::saveTimer().time( timer );
         }
 
-        Controller::setMaxIndex( max_index ); 
-        if ( BaseClass::world().rank() == BaseClass::world().root() )
+        // Distribute the index indicates the max entropy image
+        BaseClass::world().broadcast( max_index );
+        Controller::setMaxIndex( max_index );
+
+        // Output the rendering images.
+        kvs::Timer timer( kvs::Timer::Start );
+        if ( BaseClass::world().isRoot() )
         {
-            const auto time = BaseClass::timeStep();
-            const auto space = max_index;
-            const auto output_time = kvs::String::From( time, 6, '0' );
-            const auto output_space = kvs::String::From( space, 6, '0' );
-            const auto output_basename = BaseClass::outputFilename();
-            const auto output_filename = output_basename + "_" + output_time + "_" + output_space;
-            const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".bmp";
-            images[ space ].write( filename );
+            if ( BaseClass::isOutputImageEnabled() )
+            {
+                const auto index = Controller::maxIndex();
+                const auto& location = BaseClass::viewpoint().at( index );
+                const auto& frame_buffer = frame_buffers[ index ];
+                this->output_color_image( location, frame_buffer );
+                //this->output_depth_image( location, frame_buffer );
+            }
         }
+        timer.stop();
+        save_time += BaseClass::saveTimer().time( timer );
     }
     else
     {
-        const auto& location = BaseClass::viewpoint().at( pathIndex() );
+        auto index = Controller::pathIndex();
+        auto location = BaseClass::viewpoint().at( index );
         auto frame_buffer = BaseClass::readback( location );
-            
-        kvs::Timer timer( kvs::Timer::Start );
 
+        kvs::Timer timer( kvs::Timer::Start );
         if ( BaseClass::world().rank() == BaseClass::world().root() )
         {
             if ( BaseClass::isOutputImageEnabled() )
             {
-                const auto size = BaseClass::outputImageSize( location );
-                const auto index = location.index;
-                const auto width = size.x();
-                const auto height = size.y();
-                const auto color_buffer = frame_buffer.color_buffer;
-                kvs::ColorImage image( width, height, color_buffer );
-                
-                const auto time = BaseClass::timeStep();
-                const auto output_time = kvs::String::From( time, 6, '0' );
-                const auto output_basename = BaseClass::outputFilename();
-                const auto output_filename = output_basename + "_" + output_time;
-                const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".bmp";
-                image.write( filename );
+                location.index = 999999;
+                this->output_color_image( location, frame_buffer );
+                //this->output_depth_image( location, frame_buffer );
             }
         }
 
         timer.stop();
         save_time += BaseClass::saveTimer().time( timer );
     }
+    m_entr_timer.stamp( entr_time );
     BaseClass::saveTimer().stamp( save_time );
     BaseClass::rendTimer().stamp( BaseClass::rendTime() );
     BaseClass::compTimer().stamp( BaseClass::compTime() );
@@ -122,7 +137,7 @@ inline void EntropyControlledAdaptor::execRendering()
     {
         const auto& location = BaseClass::viewpoint().at( index() );
         auto frame_buffer = this->readback( location );
-            
+
         kvs::Timer timer( kvs::Timer::Start );
 
         if ( m_world.rank() == m_world.root() )
@@ -135,7 +150,7 @@ inline void EntropyControlledAdaptor::execRendering()
                 const auto height = size.y();
                 const auto color_buffer = frame_buffer.color_buffer;
                 kvs::ColorImage image( width, height, color_buffer );
-                
+
                 const auto time = BaseClass::timeStep();
                 const auto output_time = kvs::String::From( time, 6, '0' );
                 const auto output_basename = BaseClass::outputFilename();
@@ -160,7 +175,7 @@ inline kvs::Vec3 EntropyControlledAdaptor::process( const Data& data )
 
     const auto u = BaseClass::viewpoint().at( Controller::maxIndex() ).up_vector;
     Controller::setCrrUpVector( u );
-     
+
     return BaseClass::viewpoint().at( Controller::maxIndex() ).position;
 }
 
@@ -191,6 +206,26 @@ inline void EntropyControlledAdaptor::process( const Data& data , const InSituVi
         BaseClass::setViewpoint( vp );
     }
     BaseClass::setTimeStep( current_step );
+}
+
+inline void EntropyControlledAdaptor::output_color_image(
+    const InSituVis::Viewpoint::Location& location,
+    const BaseClass::FrameBuffer& frame_buffer )
+{
+    const auto size = BaseClass::outputImageSize( location );
+    const auto buffer = frame_buffer.color_buffer;
+    kvs::ColorImage image( size.x(), size.y(), buffer );
+    image.write( BaseClass::outputFinalImageName( location ) );
+}
+
+inline void EntropyControlledAdaptor::output_depth_image(
+    const InSituVis::Viewpoint::Location& location,
+    const BaseClass::FrameBuffer& frame_buffer )
+{
+    const auto size = BaseClass::outputImageSize( location );
+    const auto buffer = frame_buffer.depth_buffer;
+    kvs::GrayImage image( size.x(), size.y(), buffer );
+    image.write( BaseClass::outputFinalImageName( location ) );
 }
 
 } // end of namespace mpi

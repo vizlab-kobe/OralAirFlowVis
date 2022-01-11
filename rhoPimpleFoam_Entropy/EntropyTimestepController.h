@@ -11,6 +11,7 @@
 #include <InSituVis/Lib/Adaptor_mpi.h>
 #include <InSituVis/Lib/Viewpoint.h>
 
+
 namespace local
 {
 
@@ -23,10 +24,12 @@ public:
 
     using Volume = kvs::VolumeObjectBase;
     using Values = Volume::Values;
-    //using ImageEntropyFunction = std::function<float(const size_t,const size_t, const Values&, const Values&)>;
 
-    //static float ColorEntropy( const size_t width, const size_t height, const Values& color_buffer, const Values& depth_buffer );
-    static float DepthEntropy( const size_t width, const size_t height, const kvs::ValueArray<unsigned char>& color_buffer, const kvs::ValueArray<float>& depth_buffer );
+    using FrameBuffer = InSituVis::mpi::Adaptor::FrameBuffer;
+    using EntropyFunction = std::function<float(const FrameBuffer&)>;
+
+    static float ColorEntropy( const FrameBuffer& frame_buffer );
+    static float DepthEntropy( const FrameBuffer& frame_buffer );
 
 private:
     size_t m_interval = 1; ///< time interval of entropy calculation
@@ -41,7 +44,7 @@ private:
     kvs::Vec3 m_previous_upVector;
     kvs::Vec3 m_current_upVector;
     InSituVis::Viewpoint m_path;
-    //ImageEntropyFunction m_entropy_function = DepthEntropy;
+    EntropyFunction m_entropy_function = DepthEntropy;
 
 public:
     EntropyTimestepController() = default;
@@ -55,6 +58,8 @@ public:
     kvs::Vec3 crrUpVector() const { return m_current_upVector; }
 
     void setEntropyInterval( const size_t interval ) { m_interval = interval; }
+    void setEntropyFunction( EntropyFunction func ) { m_entropy_function = func; }
+
     void setPath( const InSituVis::Viewpoint& path ) { m_path = path; }
     void setPathIndex( const size_t index ) { path_index = index; }
     void setMaxIndex( const size_t index ) { max_index = index; }
@@ -69,6 +74,7 @@ protected:
     void push( const Data& data );
     virtual kvs::Vec3 process( const Data& data ) {}
     virtual void process( const Data& data, const InSituVis::Viewpoint& path, const size_t i ) {}
+    virtual float entropy( const FrameBuffer& frame_buffer );
 };
 
 } // end of namespace InSituVis

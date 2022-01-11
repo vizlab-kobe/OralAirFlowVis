@@ -26,7 +26,7 @@
 #include "EntropyControlledAdaptor_mpi.h"
 
 // Adaptor setting
-#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
+#define IN_SITU_VIS__ADAPTOR__ENTROPY_TIMESTEP_CONTROLL
 //#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 
 // Pipeline setting
@@ -41,7 +41,7 @@
 //#define IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES
 
 
-#if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
+#if defined( IN_SITU_VIS__ADAPTOR__ENTROPY_TIMESTEP_CONTROLL )
 namespace { using Adaptor = local::mpi::EntropyControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
@@ -88,9 +88,20 @@ public:
 
         // Time intervals.
         this->setAnalysisInterval( 10 ); // l: analysis time interval
+        //this->setAnalysisInterval( 5 ); // l: analysis time interval
         //this->setAnalysisInterval( 100 ); // l: analysis time interval
-#if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
+#if defined( IN_SITU_VIS__ADAPTOR__ENTROPY_TIMESTEP_CONTROLL )
+        //this->setEntropyFunction( BaseClass::DepthEntropy ); // default function
+        //this->setEntropyFunction( BaseClass::ColorEntropy ); // pre-defined function
+        //this->setEntropyFunction(                            // user specified function
+        //    [] ( const BaseClass::FrameBuffer& frame_buffer )
+        //    {
+        //        float entropy = 0.0f;
+        //        // calc entropy
+        //        return entropy;
+        //    } );
         this->setEntropyInterval( 30 ); // L: entropy calculation time interval
+        //this->setEntropyInterval( 3 ); // L: entropy calculation time interval
 #endif
 
         // Set visualization pipeline.
