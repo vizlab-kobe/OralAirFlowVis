@@ -104,6 +104,66 @@ inline void EntropyControlledAdaptor::execRendering()
     }
     else
     {
+        /*
+        const auto path_index = Controller::pathIndex();
+        const auto num_point = Controller::numPoint();
+        size_t start_index = 0;
+        if( path_index > 0 ) { for( size_t i = 0; i < path_index; i++ ) { start_index += num_point[i]; } }
+
+        for ( size_t i = 0; i < num_point[ path_index ]; i++ )
+        {
+            auto location = BaseClass::viewpoint().at( start_index + i );
+            if( ( location.position[0] == 0.0f ) && ( location.position[2] == 0.0f ) )
+            {
+                const size_t np = 60;
+                const auto dp = kvs::Math::pi / static_cast<float>( np - 1 );
+                const auto axis = kvs::Vec3( { 0.0f, 1.0f, 0.0f } );
+                const auto u0 = location.up_vector;
+                location.up_vector = kvs::Quaternion::Rotate( u0, axis, kvs::Math::pi / 2 );
+                
+                for( size_t j = 0; j < np; j++ )
+                {
+                    const auto u = location.up_vector;
+                    const auto uu = kvs::Quaternion::Rotate( u, axis, -1.0f * dp * j );
+                    location.up_vector = uu;
+                    
+                    auto frame_buffer = BaseClass::readback( location );
+                    
+                    kvs::Timer timer( kvs::Timer::Start );
+                    if ( BaseClass::world().rank() == BaseClass::world().root() )
+                    {
+                        if ( BaseClass::isOutputImageEnabled() )
+                        {
+                            location.index = ( path_index + 1 ) * 1000 + j;
+                            this->output_color_image( location, frame_buffer );
+                            //this->output_depth_image( location, frame_buffer );
+                        }
+                    }
+                    
+                    timer.stop();
+                    save_time += BaseClass::saveTimer().time( timer );
+                }
+            }
+            else
+            {
+                auto frame_buffer = BaseClass::readback( location );
+                
+                kvs::Timer timer( kvs::Timer::Start );
+                if ( BaseClass::world().rank() == BaseClass::world().root() )
+                {
+                    if ( BaseClass::isOutputImageEnabled() )
+                    {
+                        location.index = ( path_index + 1 ) * 1000 + i;
+                        this->output_color_image( location, frame_buffer );
+                        //this->output_depth_image( location, frame_buffer );
+                    }
+                }
+                
+                timer.stop();
+                save_time += BaseClass::saveTimer().time( timer );
+            }
+        }*/
+
         auto index = Controller::pathIndex();
         auto location = BaseClass::viewpoint().at( index );
         auto frame_buffer = BaseClass::readback( location );
@@ -179,7 +239,7 @@ inline kvs::Vec3 EntropyControlledAdaptor::process( const Data& data )
     return BaseClass::viewpoint().at( Controller::maxIndex() ).position;
 }
 
-inline void EntropyControlledAdaptor::process( const Data& data , const InSituVis::Viewpoint& path, const size_t i )
+inline void EntropyControlledAdaptor::process( const Data& data, const InSituVis::Viewpoint& path, const size_t i )
 {
     const auto current_step = BaseClass::timeStep();
     {

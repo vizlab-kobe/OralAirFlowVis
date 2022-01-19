@@ -28,6 +28,7 @@ public:
     using FrameBuffer = InSituVis::mpi::Adaptor::FrameBuffer;
     using EntropyFunction = std::function<float(const FrameBuffer&)>;
 
+    static float Entropy( const FrameBuffer& frame_buffer );
     static float ColorEntropy( const FrameBuffer& frame_buffer );
     static float DepthEntropy( const FrameBuffer& frame_buffer );
 
@@ -44,7 +45,8 @@ private:
     kvs::Vec3 m_previous_upVector;
     kvs::Vec3 m_current_upVector;
     InSituVis::Viewpoint m_path;
-    EntropyFunction m_entropy_function = DepthEntropy;
+    kvs::ValueArray<size_t> m_num_point;
+    EntropyFunction m_entropy_function = Entropy;
 
 public:
     EntropyTimestepController() = default;
@@ -52,6 +54,7 @@ public:
 
     size_t entropyInterval() const { return m_interval; }
     InSituVis::Viewpoint path() const { return m_path; }
+    kvs::ValueArray<size_t> numPoint() const { return m_num_point; }
     size_t pathIndex() const { return path_index; }
     size_t maxIndex() const { return max_index; }
     kvs::Vec3 prvUpVector() const { return m_previous_upVector; }
@@ -61,6 +64,7 @@ public:
     void setEntropyFunction( EntropyFunction func ) { m_entropy_function = func; }
 
     void setPath( const InSituVis::Viewpoint& path ) { m_path = path; }
+    void setNumPoint( const kvs::ValueArray<size_t> num_point ) { m_num_point = num_point; }
     void setPathIndex( const size_t index ) { path_index = index; }
     void setMaxIndex( const size_t index ) { max_index = index; }
     void setPrvUpVector( const kvs::Vec3& upVector ) { m_previous_upVector = upVector; }
@@ -75,6 +79,13 @@ protected:
     virtual kvs::Vec3 process( const Data& data ) {}
     virtual void process( const Data& data, const InSituVis::Viewpoint& path, const size_t i ) {}
     virtual float entropy( const FrameBuffer& frame_buffer );
+    InSituVis::Viewpoint CreatePath(
+        const kvs::Vec3& position_prv,
+        const kvs::Vec3& upVector_prv,
+        const kvs::Vec3& position_crr,
+        const kvs::Vec3& upVector_crr,
+        const size_t point_interval
+    );
 };
 
 } // end of namespace InSituVis
