@@ -45,7 +45,9 @@ private:
     kvs::Vec3 m_previous_upVector;
     kvs::Vec3 m_current_upVector;
     InSituVis::Viewpoint m_path;
-    kvs::ValueArray<size_t> m_num_point;
+    size_t m_pole_num = 0;
+    kvs::Vec3 m_pole_up_vector;
+    kvs::Vec3 m_pole_position;
     EntropyFunction m_entropy_function = Entropy;
 
 public:
@@ -54,7 +56,9 @@ public:
 
     size_t entropyInterval() const { return m_interval; }
     InSituVis::Viewpoint path() const { return m_path; }
-    kvs::ValueArray<size_t> numPoint() const { return m_num_point; }
+    size_t poleNum() const { return m_pole_num; }
+    kvs::Vec3 poleUpVector() const { return m_pole_up_vector; }
+    kvs::Vec3 polePosition() const { return m_pole_position; }
     size_t pathIndex() const { return path_index; }
     size_t maxIndex() const { return max_index; }
     kvs::Vec3 prvUpVector() const { return m_previous_upVector; }
@@ -64,7 +68,9 @@ public:
     void setEntropyFunction( EntropyFunction func ) { m_entropy_function = func; }
 
     void setPath( const InSituVis::Viewpoint& path ) { m_path = path; }
-    void setNumPoint( const kvs::ValueArray<size_t> num_point ) { m_num_point = num_point; }
+    void setPoleNum( const size_t pole_num ) { m_pole_num = pole_num; }
+    void setPoleUpVector( const kvs::Vec3& pole_up_vector ) { m_pole_up_vector = pole_up_vector; }
+    void setPolePosition( const kvs::Vec3& pole_position ) { m_pole_position = pole_position; }
     void setPathIndex( const size_t index ) { path_index = index; }
     void setMaxIndex( const size_t index ) { max_index = index; }
     void setPrvUpVector( const kvs::Vec3& upVector ) { m_previous_upVector = upVector; }

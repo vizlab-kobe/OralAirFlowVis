@@ -1,3 +1,5 @@
+#include <kvs/ColorImage>
+#include <kvs/RGBColor>
 
 namespace local
 {
@@ -86,7 +88,7 @@ inline void EntropyControlledAdaptor::execRendering()
         BaseClass::world().broadcast( max_index );
         Controller::setMaxIndex( max_index );
 
-        // Output the rendering images.
+        // Output the rendering images and the heatmap of entropies.
         kvs::Timer timer( kvs::Timer::Start );
         if ( BaseClass::world().isRoot() )
         {
@@ -97,6 +99,9 @@ inline void EntropyControlledAdaptor::execRendering()
                 const auto& frame_buffer = frame_buffers[ index ];
                 this->output_color_image( location, frame_buffer );
                 //this->output_depth_image( location, frame_buffer );
+
+                //const auto dims = BaseClass::dims();
+                //this->output_heatmap( dims[2], dims[1], entropies );
             }
         }
         timer.stop();
@@ -104,68 +109,9 @@ inline void EntropyControlledAdaptor::execRendering()
     }
     else
     {
-        /*
-        const auto path_index = Controller::pathIndex();
-        const auto num_point = Controller::numPoint();
-        size_t start_index = 0;
-        if( path_index > 0 ) { for( size_t i = 0; i < path_index; i++ ) { start_index += num_point[i]; } }
-
-        for ( size_t i = 0; i < num_point[ path_index ]; i++ )
-        {
-            auto location = BaseClass::viewpoint().at( start_index + i );
-            if( ( location.position[0] == 0.0f ) && ( location.position[2] == 0.0f ) )
-            {
-                const size_t np = 60;
-                const auto dp = kvs::Math::pi / static_cast<float>( np - 1 );
-                const auto axis = kvs::Vec3( { 0.0f, 1.0f, 0.0f } );
-                const auto u0 = location.up_vector;
-                location.up_vector = kvs::Quaternion::Rotate( u0, axis, kvs::Math::pi / 2 );
-                
-                for( size_t j = 0; j < np; j++ )
-                {
-                    const auto u = location.up_vector;
-                    const auto uu = kvs::Quaternion::Rotate( u, axis, -1.0f * dp * j );
-                    location.up_vector = uu;
-                    
-                    auto frame_buffer = BaseClass::readback( location );
-                    
-                    kvs::Timer timer( kvs::Timer::Start );
-                    if ( BaseClass::world().rank() == BaseClass::world().root() )
-                    {
-                        if ( BaseClass::isOutputImageEnabled() )
-                        {
-                            location.index = ( path_index + 1 ) * 1000 + j;
-                            this->output_color_image( location, frame_buffer );
-                            //this->output_depth_image( location, frame_buffer );
-                        }
-                    }
-                    
-                    timer.stop();
-                    save_time += BaseClass::saveTimer().time( timer );
-                }
-            }
-            else
-            {
-                auto frame_buffer = BaseClass::readback( location );
-                
-                kvs::Timer timer( kvs::Timer::Start );
-                if ( BaseClass::world().rank() == BaseClass::world().root() )
-                {
-                    if ( BaseClass::isOutputImageEnabled() )
-                    {
-                        location.index = ( path_index + 1 ) * 1000 + i;
-                        this->output_color_image( location, frame_buffer );
-                        //this->output_depth_image( location, frame_buffer );
-                    }
-                }
-                
-                timer.stop();
-                save_time += BaseClass::saveTimer().time( timer );
-            }
-        }*/
-
         auto index = Controller::pathIndex();
         auto location = BaseClass::viewpoint().at( index );
+        const auto xyz = location.position;
         auto frame_buffer = BaseClass::readback( location );
 
         kvs::Timer timer( kvs::Timer::Start );
@@ -174,59 +120,56 @@ inline void EntropyControlledAdaptor::execRendering()
             if ( BaseClass::isOutputImageEnabled() )
             {
                 location.index = 999999;
-                this->output_color_image( location, frame_buffer );
-                //this->output_depth_image( location, frame_buffer );
+                if( ( xyz[0] != 0.0f ) && ( xyz[2] != 0.0f ) )
+                {
+                    this->output_color_image( location, frame_buffer );
+                    //this->output_depth_image( location, frame_buffer );
+                }
+                location.index = 999000;
             }
         }
-
         timer.stop();
         save_time += BaseClass::saveTimer().time( timer );
+
+        if( index == Controller::poleNum() )
+        {
+            const auto r = sqrt( xyz.dot( xyz ) );
+            location.position = Controller::polePosition();
+            const auto dims = BaseClass::dims();
+
+            const auto axis = kvs::Vec3( { 0.0f, 1.0f, 0.0f } );
+            const auto angle = kvs::Math::pi;
+            const auto da = angle / dims[2];
+            auto u_pole = Controller::poleUpVector();
+            const auto u0 = kvs::Quaternion::Rotate( u_pole, axis, -0.5f * kvs::Math::pi );
+            location.up_vector = u0;
+
+            for( size_t i = 0; i <= dims[2]; i++ )
+            {
+                const auto u = kvs::Quaternion::Rotate( u0, axis, da * i );
+                location.up_vector = u;
+                frame_buffer = BaseClass::readback( location );
+
+                kvs::Timer timer( kvs::Timer::Start );
+                if ( BaseClass::world().rank() == BaseClass::world().root() )
+                {
+                    if ( BaseClass::isOutputImageEnabled() )
+                    {
+                        location.index += 1;
+                        this->output_color_image( location, frame_buffer );
+                        //this->output_depth_image( location, frame_buffer );
+                    }
+                }
+                timer.stop();
+                save_time += BaseClass::saveTimer().time( timer );
+            }
+        }
     }
     m_entr_timer.stamp( entr_time );
     BaseClass::saveTimer().stamp( save_time );
     BaseClass::rendTimer().stamp( BaseClass::rendTime() );
     BaseClass::compTimer().stamp( BaseClass::compTime() );
 }
-
-/*inline void execRendering()
-{
-    m_rend_time = 0.0f;
-    m_comp_time = 0.0f;
-    float save_time = 0.0f;
-
-    {
-        const auto& location = BaseClass::viewpoint().at( index() );
-        auto frame_buffer = this->readback( location );
-
-        kvs::Timer timer( kvs::Timer::Start );
-
-        if ( m_world.rank() == m_world.root() )
-        {
-            if ( BaseClass::isOutputImageEnabled() )
-            {
-                const auto size = BaseClass::outputImageSize( location );
-                const auto index = location.index;
-                const auto width = size.x();
-                const auto height = size.y();
-                const auto color_buffer = frame_buffer.color_buffer;
-                kvs::ColorImage image( width, height, color_buffer );
-
-                const auto time = BaseClass::timeStep();
-                const auto output_time = kvs::String::From( time, 6, '0' );
-                const auto output_basename = BaseClass::outputFilename();
-                const auto output_filename = output_basename + "_" + output_time;
-                const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".bmp";
-                image.write( filename );
-            }
-        }
-
-        timer.stop();
-        save_time += BaseClass::saveTimer().time( timer );
-    }
-    BaseClass::saveTimer().stamp( save_time );
-    BaseClass::rendTimer().stamp( m_rend_time );
-    m_comp_timer.stamp( m_comp_time );
-}*/
 
 inline kvs::Vec3 EntropyControlledAdaptor::process( const Data& data )
 {
@@ -286,6 +229,71 @@ inline void EntropyControlledAdaptor::output_depth_image(
     const auto buffer = frame_buffer.depth_buffer;
     kvs::GrayImage image( size.x(), size.y(), buffer );
     image.write( BaseClass::outputFinalImageName( location ) );
+}
+
+inline void EntropyControlledAdaptor::output_heatmap(
+    const size_t num_x,
+    const size_t num_y,
+    const std::vector<float>& entropies )
+{
+    float max = -1.0f;
+    float min = -1.0f;
+    for( size_t i = 0; i < entropies.size(); i++ )
+    {
+        if( max < 0 || max < entropies[i] ) { max = entropies[i]; }
+        if( min < 0 || min > entropies[i] ) { min = entropies[i]; }
+    }
+
+    const size_t l = 10;
+    const size_t width = num_x * ( l + 1 ) + 1;
+    const size_t height = num_y * ( l + 1 ) + 1;
+    kvs::ColorImage heatmap( width, height );
+    auto cmap = kvs::ColorMap::CoolWarm();
+    cmap.setRange( 0.0f, 1.0f );
+
+    for( size_t i = 0; i <= num_x; i++ )
+    {
+        const size_t x = ( l + 1 ) * i;
+        for( size_t j = 0; j < height; j++ )
+        {
+            heatmap.setPixel( x, j, kvs::RGBColor::Black() );
+        }
+    }
+    for( size_t j = 0; j <= num_y; j++ )
+    {
+        const size_t y = ( l + 1 ) * j;
+        for( size_t i = 0; i < width; i++ )
+        {
+            heatmap.setPixel( i, y, kvs::RGBColor::Black() );
+        }
+    }
+
+    for( size_t j = 0; j < num_y; j++ )
+    {
+        for( size_t i = 0; i < num_x; i++ )
+        {
+            const size_t x = ( l + 1 ) * i + 1;
+            const size_t y = ( l + 1 ) * j + 1;
+            const size_t index = i + j * num_x;
+            const float value_norm = ( entropies[ index ] - min ) / ( max - min );
+            const auto c = cmap.at( value_norm );
+
+            for( size_t n = 0; n < l; n++ )
+            {
+                for( size_t m = 0; m < l; m++ )
+                {
+                    heatmap.setPixel( x + m, y + n, c );
+                }
+            }
+        }
+    }
+
+    const auto time = BaseClass::timeStep();
+    const auto output_time = kvs::String::From( time, 6, '0' );
+    const auto output_filename = "heatmap_" + output_time;
+    const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".bmp";
+    
+    heatmap.write( filename );
 }
 
 } // end of namespace mpi

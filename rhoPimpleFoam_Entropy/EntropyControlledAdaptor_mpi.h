@@ -56,6 +56,11 @@ private:
     void output_depth_image(
         const InSituVis::Viewpoint::Location& location,
         const BaseClass::FrameBuffer& frame_buffer );
+    
+    void output_heatmap(
+        const size_t num_x,
+        const size_t num_y,
+        const std::vector<float>& entropy );
 };
 
 } // end of namespace mpi
