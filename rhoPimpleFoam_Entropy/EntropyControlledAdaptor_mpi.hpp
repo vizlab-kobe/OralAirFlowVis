@@ -135,16 +135,18 @@ inline void EntropyControlledAdaptor::execRendering()
         {
             const auto r = sqrt( xyz.dot( xyz ) );
             location.position = Controller::polePosition();
-            const auto dims = BaseClass::dims();
+            //const auto dims = BaseClass::dims();
+            //const auto n = dims[2];
+            const auto n = 30;
 
             const auto axis = kvs::Vec3( { 0.0f, 1.0f, 0.0f } );
             const auto angle = kvs::Math::pi;
-            const auto da = angle / dims[2];
+            const auto da = angle / n;
             auto u_pole = Controller::poleUpVector();
             const auto u0 = kvs::Quaternion::Rotate( u_pole, axis, -0.5f * kvs::Math::pi );
             location.up_vector = u0;
 
-            for( size_t i = 0; i <= dims[2]; i++ )
+            for( size_t i = 0; i <= n; i++ )
             {
                 const auto u = kvs::Quaternion::Rotate( u0, axis, da * i );
                 location.up_vector = u;
