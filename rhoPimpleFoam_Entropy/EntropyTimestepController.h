@@ -8,7 +8,7 @@
 #include <queue>
 #include <functional>
 #include <kvs/VolumeObjectBase>
-#include <InSituVis/Lib/Adaptor_mpi.h>
+#include "Adaptor_mpi.h"
 #include <InSituVis/Lib/Viewpoint.h>
 
 
@@ -18,14 +18,14 @@ namespace local
 class EntropyTimestepController
 {
 public:
-    using BaseClass = InSituVis::mpi::Adaptor;
+    using BaseClass = local::mpi::Adaptor;
     using Data = InSituVis::Adaptor::ObjectList;
     using DataQueue = std::queue<Data>;
 
     using Volume = kvs::VolumeObjectBase;
     using Values = Volume::Values;
 
-    using FrameBuffer = InSituVis::mpi::Adaptor::FrameBuffer;
+    using FrameBuffer = local::mpi::Adaptor::FrameBuffer;
     using EntropyFunction = std::function<float(const FrameBuffer&)>;
 
     static float Entropy( const FrameBuffer& frame_buffer );
@@ -77,6 +77,7 @@ public:
     void setCrrUpVector( const kvs::Vec3& upVector ) { m_current_upVector = upVector; }
 
     const DataQueue& dataQueue() const { return m_data_queue; }
+    const Data& previousData() const { return m_previous_data; }
     bool isCacheEnabled() const { return m_cache_enabled; }
     void setCacheEnabled( const bool enabled = true ) { m_cache_enabled = enabled; }
 

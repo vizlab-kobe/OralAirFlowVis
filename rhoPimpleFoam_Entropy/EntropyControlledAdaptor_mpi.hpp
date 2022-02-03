@@ -100,8 +100,12 @@ inline void EntropyControlledAdaptor::execRendering()
                 this->output_color_image( location, frame_buffer );
                 //this->output_depth_image( location, frame_buffer );
 
-                //const auto dims = BaseClass::dims();
-                //this->output_heatmap( dims[2], dims[1], entropies );
+                const auto dims = BaseClass::dims();
+                this->output_heatmap( dims[2], dims[1], entropies );
+                /*if ( Controller::dataQueue().empty() && Controller::previousData().empty() )
+                {
+                    this->output_heatmap_white( dims[2], dims[1] );
+                }*/
             }
         }
         timer.stop();
@@ -135,9 +139,9 @@ inline void EntropyControlledAdaptor::execRendering()
         {
             const auto r = sqrt( xyz.dot( xyz ) );
             location.position = Controller::polePosition();
-            //const auto dims = BaseClass::dims();
-            //const auto n = dims[2];
-            const auto n = 30;
+            const auto dims = BaseClass::dims();
+            const auto n = dims[2];
+            //const auto n = 30;
 
             const auto axis = kvs::Vec3( { 0.0f, 1.0f, 0.0f } );
             const auto angle = kvs::Math::pi;
@@ -296,6 +300,45 @@ inline void EntropyControlledAdaptor::output_heatmap(
     const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".bmp";
     
     heatmap.write( filename );
+}
+
+inline void EntropyControlledAdaptor::output_heatmap_white(
+    const size_t num_x,
+    const size_t num_y )
+{
+    const size_t l = 10;
+    const size_t width = num_x * ( l + 1 ) + 1;
+    const size_t height = num_y * ( l + 1 ) + 1;
+    kvs::ColorImage heatmap_white( width, height );
+
+    for( size_t i = 0; i < width; i++ )
+    {
+        for( size_t j = 0; j < height; j++ )
+        {
+            heatmap_white.setPixel( i, j, kvs::RGBColor::White() );
+        }
+    }
+
+    for( size_t i = 0; i <= num_x; i++ )
+    {
+        const size_t x = ( l + 1 ) * i;
+        for( size_t j = 0; j < height; j++ )
+        {
+            heatmap_white.setPixel( x, j, kvs::RGBColor::Black() );
+        }
+    }
+    for( size_t j = 0; j <= num_y; j++ )
+    {
+        const size_t y = ( l + 1 ) * j;
+        for( size_t i = 0; i < width; i++ )
+        {
+            heatmap_white.setPixel( i, y, kvs::RGBColor::Black() );
+        }
+    }
+
+    const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/heatmap_white.bmp";
+    
+    heatmap_white.write( filename );
 }
 
 } // end of namespace mpi

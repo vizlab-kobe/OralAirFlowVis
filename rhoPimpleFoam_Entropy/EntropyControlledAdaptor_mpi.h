@@ -6,7 +6,7 @@
 /*****************************************************************************/
 #pragma once
 #if defined( KVS_SUPPORT_MPI )
-#include <InSituVis/Lib/Adaptor_mpi.h>
+#include "Adaptor_mpi.h"
 #include "EntropyTimestepController.h"
 #include <list>
 #include <queue>
@@ -18,10 +18,10 @@ namespace local
 namespace mpi
 {
 
-class EntropyControlledAdaptor : public InSituVis::mpi::Adaptor, public local::EntropyTimestepController
+class EntropyControlledAdaptor : public local::mpi::Adaptor, public local::EntropyTimestepController
 {
 public:
-    using BaseClass = InSituVis::mpi::Adaptor;
+    using BaseClass = local::mpi::Adaptor;
     using Controller = local::EntropyTimestepController;
 
 private:
@@ -61,6 +61,10 @@ private:
         const size_t num_x,
         const size_t num_y,
         const std::vector<float>& entropy );
+
+    void output_heatmap_white(
+        const size_t num_x,
+        const size_t num_y );
 };
 
 } // end of namespace mpi

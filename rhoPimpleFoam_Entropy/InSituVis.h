@@ -46,7 +46,7 @@ namespace { using Adaptor = local::mpi::EntropyControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #else
-namespace { using Adaptor = InSituVis::mpi::Adaptor; }
+namespace { using Adaptor = local::mpi::Adaptor; }
 #endif
 
 
@@ -138,7 +138,7 @@ public:
         vp.setDims( dims );
         vp.create( dir );
         this->setViewpoint( vp );
-        //Adaptor::setDims( dims );
+        Adaptor::setDims( dims );
 #endif
     }
 

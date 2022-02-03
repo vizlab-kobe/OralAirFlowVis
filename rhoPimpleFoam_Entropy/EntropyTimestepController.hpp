@@ -69,6 +69,8 @@ inline float EntropyTimestepController::Entropy( const FrameBuffer& frame_buffer
 {
     const float p = 0.5f;
     return p * ColorEntropy( frame_buffer ) + ( 1 - p ) * DepthEntropy( frame_buffer );
+    //return ColorEntropy( frame_buffer );
+    //return DepthEntropy( frame_buffer );
 }
 
 inline float EntropyTimestepController::ColorEntropy( const FrameBuffer& frame_buffer )
@@ -240,7 +242,7 @@ inline InSituVis::Viewpoint EntropyTimestepController::CreatePath(
             {
                 const auto xyz = kvs::Quaternion::Rotate( position_prv, axis, da * i );
 
-                if( ( xyz[0] == 0 ) && ( xyz[2] == 0 ) )
+                if( ( xyz[0] == 0.0f ) && ( xyz[2] == 0.0f ) )
                 {
                     const auto u = axis;
                     m_pole_num = i;
@@ -252,11 +254,11 @@ inline InSituVis::Viewpoint EntropyTimestepController::CreatePath(
                 else
                 {
                     const auto u = calcUpVector( xyz );
-                    if( ( x_prv * xyz[0] < 0 ) && ( z_prv * xyz[2] < 0 ) )
+                    if( ( x_prv * xyz[0] < 0.0f ) && ( z_prv * xyz[2] < 0.0f ) )
                     {
                         m_pole_num = i;
                         m_pole_up_vector = axis;
-                        if( xyz[1] > 0 ) { m_pole_position = pole_n; }
+                        if( xyz[1] > 0.0f ) { m_pole_position = pole_n; }
                         else { m_pole_position = pole_s; }
                         m_pole_up_vector[1] = 0.0f;
                     }
