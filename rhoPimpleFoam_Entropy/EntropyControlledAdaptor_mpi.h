@@ -6,7 +6,8 @@
 /*****************************************************************************/
 #pragma once
 #if defined( KVS_SUPPORT_MPI )
-#include "Adaptor_mpi.h"
+#include <InSituVis/Lib/Adaptor_mpi.h>
+//#include "Adaptor_mpi.h"
 #include "EntropyTimestepController.h"
 #include <list>
 #include <queue>
@@ -18,10 +19,10 @@ namespace local
 namespace mpi
 {
 
-class EntropyControlledAdaptor : public local::mpi::Adaptor, public local::EntropyTimestepController
+class EntropyControlledAdaptor : public InSituVis::mpi::Adaptor, public local::EntropyTimestepController
 {
 public:
-    using BaseClass = local::mpi::Adaptor;
+    using BaseClass = InSituVis::mpi::Adaptor;
     using Controller = local::EntropyTimestepController;
 
 private:
@@ -46,8 +47,8 @@ protected:
     virtual void execRendering();
 
 private:
-    kvs::Vec3 process( const Data& data );
-    void process( const Data& data , const InSituVis::Viewpoint& path, const size_t i );
+    void process( const Data& data );
+    void process( const Data& data , const size_t i );
 
     void output_color_image(
         const InSituVis::Viewpoint::Location& location,
@@ -56,15 +57,6 @@ private:
     void output_depth_image(
         const InSituVis::Viewpoint::Location& location,
         const BaseClass::FrameBuffer& frame_buffer );
-    
-    void output_heatmap(
-        const size_t num_x,
-        const size_t num_y,
-        const std::vector<float>& entropy );
-
-    void output_heatmap_white(
-        const size_t num_x,
-        const size_t num_y );
 };
 
 } // end of namespace mpi

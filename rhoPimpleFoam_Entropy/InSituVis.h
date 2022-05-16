@@ -22,7 +22,7 @@
 #include <InSituVis/Lib/SphericalViewpoint.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 #include <random>
-#include <InSituVis/Lib/Adaptor_mpi.h>
+#include <InSituVis/Lib/Adaptor.h>
 #include "EntropyControlledAdaptor_mpi.h"
 
 // Adaptor setting
@@ -46,7 +46,7 @@ namespace { using Adaptor = local::mpi::EntropyControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #else
-namespace { using Adaptor = local::mpi::Adaptor; }
+namespace { using Adaptor = InSituVis::mpi::Adaptor; }
 #endif
 
 
@@ -138,7 +138,6 @@ public:
         vp.setDims( dims );
         vp.create( dir );
         this->setViewpoint( vp );
-        Adaptor::setDims( dims );
 #endif
     }
 
