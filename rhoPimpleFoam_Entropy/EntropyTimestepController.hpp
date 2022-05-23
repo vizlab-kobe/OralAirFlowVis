@@ -231,7 +231,7 @@ inline void EntropyTimestepController::push( const Data& data )
                 this->process( data );
                 auto max_position_q = kvs::Quaternion::RotationQuaternion( m_position0, m_max_position );
                 max_position_q.normalize();
-                if( max_position_q != m_max_positions.back() )
+                if( max_position_q != m_max_positions.back() && max_position_q != -1.0f * m_max_positions.back())
                 {
                     count += 1;
                 }
@@ -243,7 +243,7 @@ inline void EntropyTimestepController::push( const Data& data )
                     m_max_positions.pop();
                     auto q3 = m_max_positions.front();
                     m_max_positions.pop();
-                    while( q2 == q3 )
+                    while( q2 == q3 || q2 == -1.0f * q3 )
                     {
                         const kvs::Vec3 l = { 0.0f, 0.0f, 0.0f };
                         const auto d = InSituVis::Viewpoint::Direction::Uni;
