@@ -87,10 +87,10 @@ inline void EntropyControlledAdaptor::execRendering()
         // Distribute the index indicates the max entropy image
         BaseClass::world().broadcast( max_index );
         const auto max_position = BaseClass::viewpoint().at( max_index ).position;
-        const auto max_up_vector = BaseClass::viewpoint().at( max_index ).up_vector;
+        const auto max_rotation = BaseClass::viewpoint().at( max_index ).rotation;
         Controller::setMaxIndex( max_index );
         Controller::setMaxPosition( max_position );
-        Controller::setMaxUpVector( max_up_vector );
+        Controller::setMaxRotation( max_rotation );
 
         // Output the rendering images and the heatmap of entropies.
         kvs::Timer timer( kvs::Timer::Start );
@@ -110,9 +110,13 @@ inline void EntropyControlledAdaptor::execRendering()
     }
     else
     {
-        auto path_index = Controller::pathIndex();
-        auto location = Controller::path().at( path_index );
-        const auto xyz = location.position;
+        auto rotation = Controller::erpRotation();
+        const size_t i = 999999;
+        const auto d = InSituVis::Viewpoint::Direction::Uni;
+        const auto p = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, 12.0f, 0.0f } ), rotation );
+        const auto u = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, 0.0f, -1.0f } ), rotation );
+        const auto l = kvs::Vec3( { 0.0f, 0.0f, 0.0f } );
+        const auto location = InSituVis::Viewpoint::Location( i, d, p, u, rotation, l );
         auto frame_buffer = BaseClass::readback( location );
 
         kvs::Timer timer( kvs::Timer::Start );
@@ -120,7 +124,6 @@ inline void EntropyControlledAdaptor::execRendering()
         {
             if ( BaseClass::isOutputImageEnabled() )
             {
-                location.index = 999999;
                 this->output_color_image( location, frame_buffer );
                 //this->output_depth_image( location, frame_buffer );
             }
@@ -140,7 +143,7 @@ inline void EntropyControlledAdaptor::process( const Data& data )
     this->execRendering();
 }
 
-inline void EntropyControlledAdaptor::process( const Data& data, const size_t i )
+inline void EntropyControlledAdaptor::process( const Data& data, const kvs::Quaternion& rotation )
 {
     const auto current_step = BaseClass::timeStep();
     {
@@ -159,7 +162,7 @@ inline void EntropyControlledAdaptor::process( const Data& data, const size_t i 
         BaseClass::tstepList().stamp( step );
 
         // Execute vis. pipeline and rendering.
-        Controller::setPathIndex( i );
+        Controller::setErpRotation( rotation );
         BaseClass::execPipeline( data );
         this->execRendering();
     }

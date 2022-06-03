@@ -5,19 +5,82 @@
 namespace
 {
 
-inline kvs::Quaternion slerp( const kvs::Quaternion& q1, const kvs::Quaternion& q2, const float t )
+inline kvs::Quaternion log( const kvs::Quaternion& q )
 {
+    kvs::Quaternion lnq;
+
+    const float norm_xyz = std::sqrt( q.x() * q.x() + q.y() * q.y() + q.z() * q.z() );
+    const float theta = std::atan2( norm_xyz, q.w() );
+
+    if(  std::abs( q.w() ) < 1 )
+    {
+        if( std::abs( theta ) > 0 )
+        {
+            lnq.x() = q.x() * theta / std::sin( theta );
+            lnq.y() = q.y() * theta / std::sin( theta );
+            lnq.z() = q.z() * theta / std::sin( theta );
+            lnq.w() = 0.0f;
+
+            return lnq;
+        }
+    }
+
+    lnq.x() = q.x();
+    lnq.y() = q.y();
+    lnq.z() = q.z();
+    lnq.w() = 0.0f;
+
+    return lnq;
+}
+
+inline kvs::Quaternion exp( const kvs::Quaternion& q )
+{
+    kvs::Quaternion expq;
+
+    const float theta = std::sqrt( q.x() * q.x() + q.y() * q.y() + q.z() * q.z() );
+    if ( theta > 0 )
+    {
+        expq.x() = std::exp( q.w() ) * q.x() * std::sin( theta ) / theta;
+        expq.y() = std::exp( q.w() ) * q.y() * std::sin( theta ) / theta;
+        expq.z() = std::exp( q.w() ) * q.z() * std::sin( theta ) / theta;
+        expq.w() = std::exp( q.w() ) * std::cos( theta );
+    }
+    else
+    {
+        expq.x() = std::exp( q.w() ) * q.x();
+        expq.y() = std::exp( q.w() ) * q.y();
+        expq.z() = std::exp( q.w() ) * q.z();
+        expq.w() = std::exp( q.w() ) * std::cos( theta );
+    }
+
+    return expq;
+}
+
+inline kvs::Quaternion slerp( const kvs::Quaternion& q1, const kvs::Quaternion& q2, const float t , const bool shortest )
+{
+    kvs::Quaternion qt;
+
     auto qq1 = q1; qq1.normalize();
     auto qq2 = q2; qq2.normalize();
     auto dot = qq1.dot( qq2 );
-    if( dot < 0 )
-    { 
-        qq2 = -qq2;
-        dot = -dot;
+    if( shortest )
+    {
+        if( dot < 0 )
+        { 
+            qq2 = -qq2;
+            dot = -dot;
+        }
     }
 
-    auto phi = std::acos( dot );
-    auto qt = ( std::sin( phi * ( 1 - t ) ) * qq1 + std::sin( phi * t ) * qq2 ) / std::sin( phi );
+    const float phi = std::acos( dot );
+    if( phi > 0 && phi < kvs::Math::pi )
+    {
+        qt = ( std::sin( phi * ( 1.0f - t ) ) * qq1 + std::sin( phi * t ) * qq2 ) / std::sin( phi );    
+    }
+    else
+    {
+        qt = ( 1.0f - t ) * qq1 + t * qq2;
+    }
     qt.normalize();
 
     return qt;
@@ -30,79 +93,31 @@ inline kvs::Quaternion spline(
     const kvs::Quaternion& q4,
     const float t )
 {
+    kvs::Quaternion qt;
+
     auto qq1 = q1; qq1.normalize();
     auto qq2 = q2; qq2.normalize();
-    if( qq1.dot( qq2 ) < 0 ) { qq2 = -qq2; }
     auto qq3 = q3; qq3.normalize();
-    if( qq2.dot( qq3 ) < 0 ) { qq3 = -qq3; }
     auto qq4 = q4; qq4.normalize();
+    
+    if( qq1.dot( qq2 ) < 0 ) { qq2 = -qq2; }
+    if( qq2.dot( qq3 ) < 0 ) { qq3 = -qq3; }
     if( qq3.dot( qq4 ) < 0 ) { qq4 = -qq4; }
 
     auto qq2i = qq2; qq2i.conjugate();
     auto qq3i = qq3; qq3i.conjugate();
 
-    const auto a2 = qq2 * ( ( ( qq2i * qq1 ).log() + ( qq2i * qq3 ).log() ) / -4.0f ).exp();
-    const auto a3 = qq3 * ( ( ( qq3i * qq2 ).log() + ( qq3i * qq4 ).log() ) / -4.0f ).exp();
+    auto a2 = qq2 * exp( ( log( qq2i * qq1 ) + log( qq2i * qq3 ) ) * -0.25f );
+    auto a3 = qq3 * exp( ( log( qq3i * qq2 ) + log( qq3i * qq4 ) ) * -0.25f );
     
-    auto qt = slerp( slerp( q2, q3, t ), slerp( a2, a3, t ), 2.0f * t * ( 1 - t ) );
+    auto slerp1 = slerp( qq2, qq3, t, true );
+    auto slerp2 = slerp( a2, a3, t, false );
+    float s = 2.0f * t * ( 1.0f - t );
+
+    qt = slerp( slerp1, slerp2, s, false );
     qt.normalize();
 
     return qt;
-}
-
-inline kvs::Vec3 calcUpVector( const kvs::Vec3& xyz )
-{
-    const float x = xyz[0];
-    const float y = xyz[1];
-    const float z = xyz[2];
-    kvs::Vec3 u;
-
-    if( ( x == 0 ) && ( z == 0 ) ){
-        u = kvs::Vec3( { 0.0f, 0.0f, -1.0f } );
-    }
-    else
-    {
-        float r, t, p;
-        r = sqrt( xyz.dot( xyz ) );
-        t = acos( y / r );
-        if ( x >= 0 )
-        {
-            p = acos( z / sqrt( z * z + x * x ) );
-        }
-        else
-        {
-            p = -1 * acos( z / sqrt( z * z + x * x ) );
-        }
-        if ( p < 0 )
-        {
-            p += 2 * kvs::Math::pi;
-        }
-                        
-        auto rtp = kvs::Vec3( { r, t, p } );
-                        
-        kvs::Vec3 pp;
-        if ( rtp[1] > kvs::Math::pi / 2 )
-        {
-            pp = rtp - kvs::Vec3( { 0, kvs::Math::pi / 2, 0 } );
-        }
-        else
-        {
-            pp = rtp + kvs::Vec3( { 0, kvs::Math::pi / 2, 0 } );
-        }
-        const float pp_x = pp[0] * std::sin( pp[1] ) * std::sin( pp[2] );
-        const float pp_y = pp[0] * std::cos( pp[1] );
-        const float pp_z = pp[0] * std::sin( pp[1] ) * std::cos( pp[2] );
-        if ( rtp[1] > kvs::Math::pi / 2 )
-        {
-            u = kvs::Vec3( { pp_x, pp_y, pp_z } );
-        }
-        else
-        {
-            u = -1 * kvs::Vec3( { pp_x, pp_y, pp_z } );
-        }
-    }
-
-    return u;
 }
 
 }
@@ -113,8 +128,8 @@ namespace local
 inline float EntropyTimestepController::Entropy( const FrameBuffer& frame_buffer )
 {
     const float p = 0.5f;
-    //return p * ColorEntropy( frame_buffer ) + ( 1 - p ) * DepthEntropy( frame_buffer );
-    return ColorEntropy( frame_buffer );
+    return p * ColorEntropy( frame_buffer ) + ( 1 - p ) * DepthEntropy( frame_buffer );
+    //return ColorEntropy( frame_buffer );
     //return DepthEntropy( frame_buffer );
 }
 
@@ -207,19 +222,10 @@ inline void EntropyTimestepController::push( const Data& data )
         // Initial step.
         this->process( data );
         m_previous_data = data;
-        auto max_position_q = kvs::Quaternion::RotationQuaternion( m_position0, m_max_position );
-        max_position_q.normalize();
-        auto start_position = kvs::Vec3( { 0.0f, 0.0f, 12.0f } );
-        if( start_position == m_max_position )
-        {
-            start_position = kvs::Vec3( { 0.0f, 0.0f, -12.0f } );
-        }
-        auto start_position_q = kvs::Quaternion::RotationQuaternion( m_position0, start_position );
-        start_position_q.normalize();
-        m_max_positions.push( start_position_q );
-        count += 1;
-        m_max_positions.push( max_position_q );
-        count += 1;
+        auto max_rotation = m_max_rotation;
+        max_rotation.normalize();
+        m_max_rotations.push( max_rotation );
+        count++;
         m_data_queue.push( data );
     }
     else
@@ -229,73 +235,84 @@ inline void EntropyTimestepController::push( const Data& data )
             if( m_data_queue.size() % m_interval == 0 )
             {
                 this->process( data );
-                auto max_position_q = kvs::Quaternion::RotationQuaternion( m_position0, m_max_position );
-                max_position_q.normalize();
-                if( max_position_q != m_max_positions.back() && max_position_q != -1.0f * m_max_positions.back())
+                auto max_rotation = m_max_rotation;
+                max_rotation.normalize();
+                if( max_rotation != m_max_rotations.back() && max_rotation != -m_max_rotations.back() )
                 {
-                    count += 1;
+                    if( count == 1 )
+                    {
+                        std::queue<kvs::Quaternion> empty;
+                        m_max_rotations.swap( empty );
+                        auto start = max_rotation;
+                        start.conjugate();
+                        m_max_rotations.push( start );
+                        count++;
+                        for( size_t i = 0; i < empty.size(); i++ )
+                        {
+                            m_max_rotations.push( empty.front() );
+                            empty.pop();
+                        }
+                    }
+                    count++;
                 }
                 if( count == 4 )
                 {
-                    const auto q1 = m_max_positions.front();
-                    m_max_positions.pop();
-                    auto q2 = m_max_positions.front();
-                    m_max_positions.pop();
-                    auto q3 = m_max_positions.front();
-                    m_max_positions.pop();
-                    while( q2 == q3 || q2 == -1.0f * q3 )
+                    const auto q1 = m_max_rotations.front();
+                    m_max_rotations.pop();
+                    auto q2 = m_max_rotations.front();
+                    m_max_rotations.pop();
+                    auto q3 = m_max_rotations.front();
+                    m_max_rotations.pop();
+                    while( q2 == q3 || q2 == -q3 )
                     {
-                        const kvs::Vec3 l = { 0.0f, 0.0f, 0.0f };
-                        const auto d = InSituVis::Viewpoint::Direction::Uni;
-                        auto path = InSituVis::Viewpoint();
-                        const auto p = kvs::Quaternion::Rotate( m_position0, q2 );
-                        const auto u = calcUpVector( p );
+                        std::queue<kvs::Quaternion> empty;
+                        m_path.swap( empty );
                         for( size_t i = 0; i < m_interval - 1; i++ )
                         {
-                            path.add( { d, p, u, l } );
+                            m_path.push( q2 );
                         }
-                        m_path = path;
 
                         m_data_queue.pop();
                         for ( size_t i = 0; i < m_interval - 1; i++ )
                         {
                             const auto data_front = m_data_queue.front();
-                            this->process( data_front, i );
+                            const auto rotation = m_path.front();
+                            this->process( data_front, rotation );
                             m_data_queue.pop();
+                            m_path.pop();
                         }
-                        m_path.clear();
                         
-                        q3 = m_max_positions.front();
-                        m_max_positions.pop();
+                        q3 = m_max_rotations.front();
+                        m_max_rotations.pop();
                     }
-                    auto q4 = max_position_q;
+                    auto q4 = max_rotation;
                     
-                    if( q1.dot( q2 ) < 0 ) { q2 = -q2; }
-                    if( q2.dot( q3 ) < 0 ) { q3 = -q3; }
-                    if( q3.dot( q4 ) < 0 ) { q4 = -q4; }
-                    m_path = this->createPathSpline( q1, q2, q3, q4, m_interval );
+                    //this->createPathSlerp( q2, q3, m_interval );
+                    this->createPathSpline( q1, q2, q3, q4, m_interval );
+
                     m_data_queue.pop();
                     for ( size_t i = 0; i < m_interval - 1; i++ )
                     {
                         const auto data_front = m_data_queue.front();
-                        this->process( data_front, i );
+                        const auto rotation = m_path.front();
+                        this->process( data_front, rotation );
                         m_data_queue.pop();
+                        m_path.pop();
                     }
-                    m_path.clear();
                     
-                    std::queue<kvs::Quaternion> position_queue;
-                    position_queue.swap( m_max_positions );
-                    m_max_positions.push( q2 );
-                    m_max_positions.push( q3 );
-                    for( size_t i = 0; i < position_queue.size(); i++ )
+                    std::queue<kvs::Quaternion> empty;
+                    m_max_rotations.swap( empty );
+                    m_max_rotations.push( q2 );
+                    m_max_rotations.push( q3 );
+                    for( size_t i = 0; i < empty.size(); i++ )
                     {
-                        m_max_positions.push( position_queue.front() );
-                        position_queue.pop();
+                        m_max_rotations.push( empty.front() );
+                        empty.pop();
                     }
-                    count -= 1;
+                    count--;
                 }
                 m_data_queue.push( data );
-                m_max_positions.push( max_position_q );
+                m_max_rotations.push( max_rotation );
             }
             else
             {
@@ -310,29 +327,38 @@ float EntropyTimestepController::entropy( const FrameBuffer& frame_buffer )
     return m_entropy_function( frame_buffer );
 }
 
-inline InSituVis::Viewpoint EntropyTimestepController::createPathSpline(
+inline void EntropyTimestepController::createPathSlerp(
+    const kvs::Quaternion& q1,
+    const kvs::Quaternion& q2,
+    const size_t point_interval )
+{
+    std::queue<kvs::Quaternion> empty;
+    m_path.swap( empty );
+
+    for( size_t i = 1; i < point_interval; i++ )
+    {
+        const auto t = static_cast<double>( i ) / static_cast<double>( point_interval );
+        const auto q = slerp( q1, q2, t, true );
+        m_path.push( q );
+    }
+}
+
+inline void EntropyTimestepController::createPathSpline(
     const kvs::Quaternion& q1,
     const kvs::Quaternion& q2,
     const kvs::Quaternion& q3,
     const kvs::Quaternion& q4,
     const size_t point_interval )
 {
-    using Viewpoint = InSituVis::Viewpoint;
-    const kvs::Vec3 l = { 0.0f, 0.0f, 0.0f };
-    const auto d = Viewpoint::Direction::Uni;
-    auto path = Viewpoint();
+    std::queue<kvs::Quaternion> empty;
+    m_path.swap( empty );
 
     for( size_t i = 1; i < point_interval; i++ )
     {
-        const auto t = static_cast<double>( i ) / static_cast<double>( point_interval );
-        //const auto q = kvs::Quaternion::SplineInterpolation( q1, q2, q3, q4, t, true );
+        const float t = static_cast<float>( i ) / static_cast<float>( point_interval );
         const auto q = spline( q1, q2, q3, q4, t );
-        const auto p = kvs::Quaternion::Rotate( m_position0, q );
-        const auto u = calcUpVector( p );
-        path.add( { d, p, u, l } );
+        m_path.push( q );
     }
-
-    return path;
 }
 
 } // end of namespace InSituVis

@@ -48,7 +48,7 @@ protected:
 
 private:
     void process( const Data& data );
-    void process( const Data& data , const size_t i );
+    void process( const Data& data , const kvs::Quaternion& rotation );
 
     void output_color_image(
         const InSituVis::Viewpoint::Location& location,
