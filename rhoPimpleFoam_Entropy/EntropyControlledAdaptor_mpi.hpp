@@ -103,6 +103,7 @@ inline void EntropyControlledAdaptor::execRendering()
                 const auto& frame_buffer = frame_buffers[ index ];
                 this->output_color_image( location, frame_buffer );
                 //this->output_depth_image( location, frame_buffer );
+                this->output_entropy_table( entropies );
             }
         }
         timer.stop();
@@ -187,6 +188,43 @@ inline void EntropyControlledAdaptor::output_depth_image(
     const auto buffer = frame_buffer.depth_buffer;
     kvs::GrayImage image( size.x(), size.y(), buffer );
     image.write( BaseClass::outputFinalImageName( location ) );
+}
+
+inline void EntropyControlledAdaptor::output_entropy_table(
+    const std::vector<float> entropies )
+{
+    const auto time = BaseClass::timeStep();
+    const auto output_time = kvs::String::From( time, 6, '0' );
+    const auto output_filename =  "output_entropy_table_" + output_time;
+    const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".csv";
+    std::ofstream table( filename );
+
+    const size_t dim = BaseClass::viewpoint().numberOfLocations();
+    size_t dim_lati = 1;
+    size_t dim_long = 1;
+    auto y0 = BaseClass::viewpoint().at( 0 ).position[1];
+    for( size_t i = 1; i < dim; i++ )
+    {
+        auto y = BaseClass::viewpoint().at( i ).position[1];
+        if( y != y0 )
+        {
+            dim_lati = i;
+            dim_long = dim / dim_lati;
+            break;
+        }
+    }
+
+    for( size_t i = 0; i < dim; i++ )
+    {
+        table << entropies[i];
+        table << ",";
+        if( ( i + 1 ) % dim_long == 0 )
+        {
+            table << std::endl;
+        }
+    }
+
+    table.close();
 }
 
 } // end of namespace mpi

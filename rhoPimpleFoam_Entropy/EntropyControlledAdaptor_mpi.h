@@ -57,6 +57,9 @@ private:
     void output_depth_image(
         const InSituVis::Viewpoint::Location& location,
         const BaseClass::FrameBuffer& frame_buffer );
+    
+    void output_entropy_table(
+        const std::vector<float> entropies );
 };
 
 } // end of namespace mpi
