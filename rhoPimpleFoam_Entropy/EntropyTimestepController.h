@@ -36,6 +36,7 @@ private:
     size_t m_interval = 1; ///< time interval of entropy calculation
 
     bool m_cache_enabled = true; ///< flag for data caching
+    bool m_final_step = 0;
     size_t m_path_index = 0;
     size_t m_max_index = 0;
     kvs::Vec3 m_max_position;
@@ -71,6 +72,8 @@ public:
     const Data& previousData() const { return m_previous_data; }
     bool isCacheEnabled() const { return m_cache_enabled; }
     void setCacheEnabled( const bool enabled = true ) { m_cache_enabled = enabled; }
+    bool isFinalStep() const { return m_final_step; }
+    void setFinalStep( const bool final_step = true ) { m_final_step = final_step; }
 
 protected:
     void push( const Data& data );

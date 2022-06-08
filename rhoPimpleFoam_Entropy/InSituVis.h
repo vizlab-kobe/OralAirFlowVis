@@ -67,6 +67,14 @@ public:
     static Pipeline ExternalFace( const kvs::mpi::Communicator& world );
     static Pipeline StochasticRendering( const size_t repeats );
 
+    void setFinalTimeStepIndex( size_t index )
+    {
+        m_final_time_step_index = index;
+#if defined( IN_SITU_VIS__ADAPTOR__ENTROPY_TIMESTEP_CONTROLL )
+        this->setFinalTimeStep( m_final_time_step_index );
+#endif
+    }
+
 private:
     kvs::PolygonObject m_boundary_mesh; ///< boundary mesh
     kvs::mpi::StampTimer m_sim_timer{ BaseClass::world() }; ///< timer for sim. process
@@ -74,6 +82,7 @@ private:
     kvs::mpi::StampTimer m_vis_timer{ BaseClass::world() }; ///< timer for vis. process
     kvs::Real64 m_whole_min_value = 0.0; ///< min. value of whole time-varying volume data
     kvs::Real64 m_whole_max_value = 0.0; ///< max. value of whole time-varying volume data
+    size_t m_final_time_step_index = 0;
 
 public:
     InSituVis( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root )
@@ -131,7 +140,7 @@ public:
 #elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
         //using Viewpoint = ::InSituVis::CubicViewpoint;
         using Viewpoint = ::InSituVis::SphericalViewpoint;
-        auto dims = kvs::Vec3ui( 1, 15, 30 );
+        auto dims = kvs::Vec3ui( 1, 3, 6 );
         auto dir = Viewpoint::Direction::Uni;
         //auto dir = Viewpoint::Direction::Omni;
         auto vp = Viewpoint();

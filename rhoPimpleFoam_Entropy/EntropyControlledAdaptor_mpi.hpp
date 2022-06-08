@@ -20,6 +20,11 @@ inline bool EntropyControlledAdaptor::isEntropyStep()
     return BaseClass::timeStep() % ( BaseClass::analysisInterval() * Controller::entropyInterval() ) == 0;
 }
 
+inline bool EntropyControlledAdaptor::isFinalTimeStep()
+{
+    return BaseClass::timeStep() == m_final_time_step;
+}
+
 inline bool EntropyControlledAdaptor::dump()
 {
     bool ret = true;
@@ -42,6 +47,12 @@ inline void EntropyControlledAdaptor::exec( const BaseClass::SimTime sim_time )
     Controller::push( BaseClass::objects() );
 
     BaseClass::incrementTimeStep();
+    if( this->isFinalTimeStep())
+    {
+        Controller::setFinalStep( true );
+        const auto dummy = Data();
+        Controller::push( dummy );
+    }
     BaseClass::clearObjects();
 }
 

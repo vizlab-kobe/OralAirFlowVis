@@ -7,7 +7,6 @@
 #pragma once
 #if defined( KVS_SUPPORT_MPI )
 #include <InSituVis/Lib/Adaptor_mpi.h>
-//#include "Adaptor_mpi.h"
 #include "EntropyTimestepController.h"
 #include <list>
 #include <queue>
@@ -30,6 +29,7 @@ private:
     bool m_enable_output_evaluation_image = false; ///< if true, all of evaluation images will be output
     bool m_enable_output_evaluation_image_depth = false; ///< if true, all of evaluation depth images will be output
     kvs::mpi::StampTimer m_entr_timer{ BaseClass::world() }; ///< timer for entropy evaluation
+    size_t m_final_time_step = 0;
 
 public:
     EntropyControlledAdaptor( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root ) {}
@@ -41,9 +41,11 @@ public:
 
     virtual void exec( const BaseClass::SimTime sim_time = {} );
     virtual bool dump();
+    void setFinalTimeStep( const size_t step ) { m_final_time_step = step; }
 
 protected:
     bool isEntropyStep();
+    bool isFinalTimeStep();
     virtual void execRendering();
 
 private:

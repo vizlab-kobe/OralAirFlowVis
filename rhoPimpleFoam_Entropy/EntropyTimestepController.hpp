@@ -217,6 +217,180 @@ inline float EntropyTimestepController::DepthEntropy( const FrameBuffer& frame_b
 
 inline void EntropyTimestepController::push( const Data& data )
 {
+    if( !( this->isFinalStep() ) )
+    {
+        if ( m_previous_data.empty() )
+        {
+            // Initial step.
+            this->process( data );
+            m_previous_data = data;
+            auto max_rotation = m_max_rotation;
+            max_rotation.normalize();
+            m_max_rotations.push( max_rotation );
+            count++;
+            m_data_queue.push( data );
+        }
+        else
+        {
+            if ( this->isCacheEnabled() )
+            {
+                if( m_data_queue.size() % m_interval == 0 )
+                {
+                    this->process( data );
+                    auto max_rotation = m_max_rotation;
+                    max_rotation.normalize();
+                    if( max_rotation != m_max_rotations.back() && max_rotation != -m_max_rotations.back() )
+                    {
+                        if( count == 1 )
+                        {
+                            std::queue<kvs::Quaternion> empty;
+                            m_max_rotations.swap( empty );
+                            auto start = max_rotation;
+                            start.conjugate();
+                            m_max_rotations.push( start );
+                            count++;
+                            const size_t l = empty.size();
+                            for( size_t i = 0; i < l; i++ )
+                            {
+                                m_max_rotations.push( empty.front() );
+                                empty.pop();
+                            }
+                        }
+                        count++;
+                    }
+                    if( count == 4 )
+                    {
+                        const auto q1 = m_max_rotations.front();
+                        m_max_rotations.pop();
+                        auto q2 = m_max_rotations.front();
+                        m_max_rotations.pop();
+                        auto q3 = m_max_rotations.front();
+                        m_max_rotations.pop();
+                        while( q2 == q3 || q2 == -q3 )
+                        {
+                            std::queue<kvs::Quaternion> empty;
+                            m_path.swap( empty );
+                            for( size_t i = 0; i < m_interval - 1; i++ )
+                            {
+                                m_path.push( q2 );
+                            }
+                            
+                            m_data_queue.pop();
+                            for ( size_t i = 0; i < m_interval - 1; i++ )
+                            {
+                                const auto data_front = m_data_queue.front();
+                                const auto rotation = m_path.front();
+                                this->process( data_front, rotation );
+                                m_data_queue.pop();
+                                m_path.pop();
+                            }
+                            
+                            q3 = m_max_rotations.front();
+                            m_max_rotations.pop();
+                        }
+                        auto q4 = max_rotation;
+                        
+                        //this->createPathSlerp( q2, q3, m_interval );
+                        this->createPathSpline( q1, q2, q3, q4, m_interval );
+                        
+                        m_data_queue.pop();
+                        for ( size_t i = 0; i < m_interval - 1; i++ )
+                        {
+                            const auto data_front = m_data_queue.front();
+                            const auto rotation = m_path.front();
+                            this->process( data_front, rotation );
+                            m_data_queue.pop();
+                            m_path.pop();
+                        }
+                        
+                        std::queue<kvs::Quaternion> empty;
+                        m_max_rotations.swap( empty );
+                        m_max_rotations.push( q2 );
+                        m_max_rotations.push( q3 );
+                        const size_t l = empty.size();
+                        for( size_t i = 0; i < l; i++ )
+                        {
+                            m_max_rotations.push( empty.front() );
+                            empty.pop();
+                        }
+                        count--;
+                    }
+                    m_data_queue.push( data );
+                    m_max_rotations.push( max_rotation );
+                }
+                else
+                {
+                    m_data_queue.push( data );
+                }
+            }
+        }
+    }
+    else
+    {
+        const auto q1 = m_max_rotations.front();
+        m_max_rotations.pop();
+        auto q2 = m_max_rotations.front();
+        m_max_rotations.pop();
+        auto q3 = m_max_rotations.front();
+        m_max_rotations.pop();
+        while( q2 == q3 || q2 == -q3 )
+        {
+            std::queue<kvs::Quaternion> empty;
+            m_path.swap( empty );
+            for( size_t i = 0; i < m_interval - 1; i++ )
+            {
+                m_path.push( q2 );
+            }
+
+            m_data_queue.pop();
+            for ( size_t i = 0; i < m_interval - 1; i++ )
+            {
+                const auto data_front = m_data_queue.front();
+                const auto rotation = m_path.front();
+                this->process( data_front, rotation );
+                m_data_queue.pop();
+                m_path.pop();
+            }
+                            
+            q3 = m_max_rotations.front();
+            m_max_rotations.pop();
+        }
+        auto q4 = q2; q4.conjugate();
+                        
+        //this->createPathSlerp( q2, q3, m_interval );
+        this->createPathSpline( q1, q2, q3, q4, m_interval );
+                        
+        m_data_queue.pop();
+        for ( size_t i = 0; i < m_interval - 1; i++ )
+        {
+            const auto data_front = m_data_queue.front();
+            const auto rotation = m_path.front();
+            this->process( data_front, rotation );
+            m_data_queue.pop();
+            m_path.pop();
+        }
+
+        while( m_data_queue.size() > 0 )
+        {
+            std::queue<kvs::Quaternion> empty;
+            m_path.swap( empty );
+            for( size_t i = 0; i < m_interval - 1; i++ )
+            {
+                m_path.push( q3 );
+            }
+
+            m_data_queue.pop();
+            for ( size_t i = 0; i < m_interval - 1; i++ )
+            {
+                const auto data_front = m_data_queue.front();
+                const auto rotation = m_path.front();
+                this->process( data_front, rotation );
+                m_data_queue.pop();
+                m_path.pop();
+            }
+        }
+    }
+    /*
     if ( m_previous_data.empty() )
     {
         // Initial step.
@@ -320,6 +494,7 @@ inline void EntropyTimestepController::push( const Data& data )
             }
         }
     }
+    */
 }
 
 float EntropyTimestepController::entropy( const FrameBuffer& frame_buffer )
