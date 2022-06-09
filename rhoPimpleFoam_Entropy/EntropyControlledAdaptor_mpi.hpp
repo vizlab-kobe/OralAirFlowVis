@@ -211,7 +211,6 @@ inline void EntropyControlledAdaptor::output_entropy_table(
     std::ofstream table( filename );
 
     const size_t dim = BaseClass::viewpoint().numberOfLocations();
-    size_t dim_lati = 1;
     size_t dim_long = 1;
     auto y0 = BaseClass::viewpoint().at( 0 ).position[1];
     for( size_t i = 1; i < dim; i++ )
@@ -219,8 +218,7 @@ inline void EntropyControlledAdaptor::output_entropy_table(
         auto y = BaseClass::viewpoint().at( i ).position[1];
         if( y != y0 )
         {
-            dim_lati = i;
-            dim_long = dim / dim_lati;
+            dim_long = i;
             break;
         }
     }
