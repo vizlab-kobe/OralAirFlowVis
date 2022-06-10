@@ -140,7 +140,7 @@ public:
 #elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
         //using Viewpoint = ::InSituVis::CubicViewpoint;
         using Viewpoint = ::InSituVis::SphericalViewpoint;
-        auto dims = kvs::Vec3ui( 1, 3, 6 );
+        auto dims = kvs::Vec3ui( 1, 15, 30 );
         auto dir = Viewpoint::Direction::Uni;
         //auto dir = Viewpoint::Direction::Omni;
         auto vp = Viewpoint();
