@@ -85,7 +85,7 @@ protected:
         const kvs::Quaternion& q2,
         const size_t point_interval
     );
-    void createPathSpline(
+    void createPathSquad(
         const kvs::Quaternion& q1,
         const kvs::Quaternion& q2,
         const kvs::Quaternion& q3,
