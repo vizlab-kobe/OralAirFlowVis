@@ -62,6 +62,9 @@ private:
     
     void output_entropy_table(
         const std::vector<float> entropies );
+    
+    void output_positions(
+        const std::vector<float> positions );
 };
 
 } // end of namespace mpi

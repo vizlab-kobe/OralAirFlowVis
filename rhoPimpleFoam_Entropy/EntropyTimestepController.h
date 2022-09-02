@@ -36,10 +36,13 @@ private:
     size_t m_interval = 1; ///< time interval of entropy calculation
 
     bool m_cache_enabled = true; ///< flag for data caching
-    bool m_final_step = 0;
+    bool m_final_step = false;
     size_t m_path_index = 0;
     size_t m_max_index = 0;
-    kvs::Vec3 m_max_position;
+    kvs::Vec3 m_max_position_start;
+    kvs::Vec3 m_max_position_middle;
+    kvs::Vec3 m_max_position_end;
+    std::vector<float> m_positions;
     kvs::Quaternion m_max_rotation;
     kvs::Quaternion m_erp_rotation;
     DataQueue m_data_queue{}; ///< data queue
@@ -56,7 +59,9 @@ public:
     size_t entropyInterval() const { return m_interval; }
     size_t pathIndex() const { return m_path_index; }
     size_t maxIndex() const { return m_max_index; }
-    kvs::Vec3 maxPosition() const { return m_max_position; }
+    kvs::Vec3 maxPositionStart() const { return m_max_position_start; }
+    kvs::Vec3 maxPositionMiddle() const { return m_max_position_middle; }
+    kvs::Vec3 maxPositionEnd() const { return m_max_position_end; }
     kvs::Quaternion maxRotation() const { return m_max_rotation; }
     kvs::Quaternion erpRotation() const { return m_erp_rotation; }
 
@@ -64,12 +69,15 @@ public:
     void setEntropyFunction( EntropyFunction func ) { m_entropy_function = func; }
 
     void setMaxIndex( const size_t index ) { m_max_index = index; }
-    void setMaxPosition( const kvs::Vec3& position ) { m_max_position = position; }
+    void setMaxPositionStart( const kvs::Vec3& position ) { m_max_position_start = position; }
+    void setMaxPositionMiddle( const kvs::Vec3& position ) { m_max_position_middle = position; }
+    void setMaxPositionEnd( const kvs::Vec3& position ) { m_max_position_end = position; }
     void setMaxRotation( const kvs::Quaternion& rotation ) { m_max_rotation = rotation; }
     void setErpRotation( const kvs::Quaternion& rotation ) { m_erp_rotation = rotation; }
 
     const DataQueue& dataQueue() const { return m_data_queue; }
     const Data& previousData() const { return m_previous_data; }
+    const std::vector<float>& positions() const { return m_positions; }
     bool isCacheEnabled() const { return m_cache_enabled; }
     void setCacheEnabled( const bool enabled = true ) { m_cache_enabled = enabled; }
     bool isFinalStep() const { return m_final_step; }

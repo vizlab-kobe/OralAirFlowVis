@@ -36,6 +36,8 @@ inline bool EntropyControlledAdaptor::dump()
 
         const auto basedir = BaseClass::outputDirectory().baseDirectoryName() + "/";
         ret = timer_list.write( basedir + "ent_proc_time.csv" );
+
+        this->output_positions( Controller::positions() );
     }
 
     return BaseClass::dump() && ret;
@@ -90,6 +92,8 @@ inline void EntropyControlledAdaptor::execRendering()
                     max_entropy = entropy;
                     max_index = location.index;
                 }
+
+                this->output_color_image( location, frame_buffer );
             }
             timer.stop();
             entr_time += BaseClass::saveTimer().time( timer );
@@ -100,8 +104,20 @@ inline void EntropyControlledAdaptor::execRendering()
         const auto max_position = BaseClass::viewpoint().at( max_index ).position;
         const auto max_rotation = BaseClass::viewpoint().at( max_index ).rotation;
         Controller::setMaxIndex( max_index );
-        Controller::setMaxPosition( max_position );
         Controller::setMaxRotation( max_rotation );
+
+        if( Controller::previousData().empty() )
+        {
+            Controller::setMaxPositionStart( max_position );
+            Controller::setMaxPositionMiddle( max_position );
+            Controller::setMaxPositionEnd( max_position );
+        }
+        else
+        {
+            Controller::setMaxPositionStart( Controller::maxPositionMiddle() );
+            Controller::setMaxPositionMiddle( Controller::maxPositionEnd() );
+            Controller::setMaxPositionEnd( max_position );
+        }
 
         // Output the rendering images and the heatmap of entropies.
         kvs::Timer timer( kvs::Timer::Start );
@@ -112,7 +128,7 @@ inline void EntropyControlledAdaptor::execRendering()
                 const auto index = Controller::maxIndex();
                 const auto& location = BaseClass::viewpoint().at( index );
                 const auto& frame_buffer = frame_buffers[ index ];
-                this->output_color_image( location, frame_buffer );
+                //this->output_color_image( location, frame_buffer );
                 //this->output_depth_image( location, frame_buffer );
                 this->output_entropy_table( entropies );
             }
@@ -234,6 +250,26 @@ inline void EntropyControlledAdaptor::output_entropy_table(
     }
 
     table.close();
+}
+
+inline void EntropyControlledAdaptor::output_positions(
+    const std::vector<float> positions )
+{
+    const auto output_filename =  "output_positions";
+    const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".csv";
+    std::ofstream position( filename );
+    const auto interval = BaseClass::analysisInterval();
+
+    position << "Time,X,Y,Z" << std::endl;
+    for( size_t i = 0; i < positions.size() / 3; i++ )
+    {
+        const auto x = positions[ 3 * i ];
+        const auto y = positions[ 3 * i + 1 ];
+        const auto z = positions[ 3 * i + 2 ];
+        position << interval * i << "," << x << "," << y << "," << z << std::endl;
+    }
+
+    position.close();
 }
 
 } // end of namespace mpi
