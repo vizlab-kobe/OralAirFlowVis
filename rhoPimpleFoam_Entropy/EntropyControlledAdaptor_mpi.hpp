@@ -93,7 +93,7 @@ inline void EntropyControlledAdaptor::execRendering()
                     max_index = location.index;
                 }
 
-                this->output_color_image( location, frame_buffer );
+                //this->output_color_image( location, frame_buffer );
             }
             timer.stop();
             entr_time += BaseClass::saveTimer().time( timer );
@@ -128,7 +128,7 @@ inline void EntropyControlledAdaptor::execRendering()
                 const auto index = Controller::maxIndex();
                 const auto& location = BaseClass::viewpoint().at( index );
                 const auto& frame_buffer = frame_buffers[ index ];
-                //this->output_color_image( location, frame_buffer );
+                this->output_color_image( location, frame_buffer );
                 //this->output_depth_image( location, frame_buffer );
                 this->output_entropy_table( entropies );
             }
