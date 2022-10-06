@@ -1,6 +1,7 @@
 #include <kvs/Math>
 #include <kvs/Stat>
 #include <kvs/Quaternion>
+#include <kvs/LabColor>
 
 namespace
 {
@@ -128,9 +129,47 @@ namespace local
 inline float EntropyTimestepController::Entropy( const FrameBuffer& frame_buffer )
 {
     const float p = 0.5f;
-    return p * ColorEntropy( frame_buffer ) + ( 1 - p ) * DepthEntropy( frame_buffer );
+    return p * LightnessEntropy( frame_buffer ) + ( 1 - p ) * DepthEntropy( frame_buffer );
+    //return LightnessEntropy( frame_buffer );
     //return ColorEntropy( frame_buffer );
     //return DepthEntropy( frame_buffer );
+}
+
+inline float EntropyTimestepController::LightnessEntropy( const FrameBuffer& frame_buffer )
+{
+    kvs::ValueArray<size_t> histogram( 256 );
+    histogram.fill( 0 );
+
+    size_t n = 0;
+    const auto& depth_buffer = frame_buffer.depth_buffer;
+    const auto& color_buffer = frame_buffer.color_buffer;
+    const auto length = depth_buffer.size();
+    for ( size_t i = 0; i < length; i++ )
+    {
+        const auto depth = depth_buffer[i];
+        const auto r = color_buffer[ 3 * i ];
+        const auto g = color_buffer[ 3 * i + 1 ];
+        const auto b = color_buffer[ 3 * i + 2 ];
+        const auto lab = kvs::LabColor( kvs::RGBColor( r, g, b ) );
+
+        if ( depth < 1.0f )
+        {
+            int i = static_cast<int>( lab.l() / 100 * 256 );
+            if( i > 255 ) i = 255;
+            histogram[i] += 1;
+            n += 1;
+        }
+    }
+
+    float entropy = 0.0f;
+    const auto log2 = std::log( 2.0f );
+    for ( const auto h : histogram )
+    {
+        const auto p = static_cast<float>( h ) / n;
+        if ( p > 0.0f ) { entropy -= p * std::log( p ) / log2; }
+    }
+
+    return entropy;
 }
 
 inline float EntropyTimestepController::ColorEntropy( const FrameBuffer& frame_buffer )
@@ -228,6 +267,7 @@ inline void EntropyTimestepController::push( const Data& data )
             max_rotation.normalize();
             m_max_rotations.push( max_rotation );
             m_max_rotations.push( max_rotation );
+            m_max_entropies.push( m_max_entropy );
             m_data_queue.push( data );
         }
         else
@@ -240,6 +280,7 @@ inline void EntropyTimestepController::push( const Data& data )
                     auto max_rotation = m_max_rotation;
                     max_rotation.normalize();
                     m_max_rotations.push( max_rotation );
+                    m_max_entropies.push( m_max_entropy );
                     if( m_max_rotations.size() == 4 )
                     {
                         const auto q1 = m_max_rotations.front();
@@ -255,18 +296,21 @@ inline void EntropyTimestepController::push( const Data& data )
                         this->createPathSquad( q1, q2, q3, q4, m_interval );
                         
                         m_data_queue.pop();
-                        m_positions.push_back( m_max_position_start[0] );
-                        m_positions.push_back( m_max_position_start[1] );
-                        m_positions.push_back( m_max_position_start[2] );
+                        m_path_entropies.push_back( m_max_entropies.front() );
+                        m_max_entropies.pop();
+                        m_path_positions.push_back( m_max_position_start[0] );
+                        m_path_positions.push_back( m_max_position_start[1] );
+                        m_path_positions.push_back( m_max_position_start[2] );
                         for ( size_t i = 0; i < m_interval - 1; i++ )
                         {
                             const auto data_front = m_data_queue.front();
                             const auto rotation = m_path.front();
                             this->process( data_front, rotation );
                             const auto p = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, 12.0f, 0.0f } ), rotation );
-                            m_positions.push_back( p[0] );
-                            m_positions.push_back( p[1] );
-                            m_positions.push_back( p[2] );
+                            m_path_entropies.push_back( m_max_entropy );
+                            m_path_positions.push_back( p[0] );
+                            m_path_positions.push_back( p[1] );
+                            m_path_positions.push_back( p[2] );
                             m_data_queue.pop();
                             m_path.pop();
                         }
@@ -298,18 +342,21 @@ inline void EntropyTimestepController::push( const Data& data )
         this->createPathSquad( q1, q2, q3, q4, m_interval );
                         
         m_data_queue.pop();
-        m_positions.push_back( m_max_position_middle[0] );
-        m_positions.push_back( m_max_position_middle[1] );
-        m_positions.push_back( m_max_position_middle[2] );
+        m_path_entropies.push_back( m_max_entropies.front() );
+        m_max_entropies.pop();
+        m_path_positions.push_back( m_max_position_middle[0] );
+        m_path_positions.push_back( m_max_position_middle[1] );
+        m_path_positions.push_back( m_max_position_middle[2] );
         for ( size_t i = 0; i < m_interval - 1; i++ )
         {
             const auto data_front = m_data_queue.front();
             const auto rotation = m_path.front();
             this->process( data_front, rotation );
             const auto p = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, 12.0f, 0.0f } ), rotation );
-            m_positions.push_back( p[0] );
-            m_positions.push_back( p[1] );
-            m_positions.push_back( p[2] );
+            m_path_entropies.push_back( m_max_entropy );
+            m_path_positions.push_back( p[0] );
+            m_path_positions.push_back( p[1] );
+            m_path_positions.push_back( p[2] );
             m_data_queue.pop();
             m_path.pop();
         }
@@ -324,18 +371,21 @@ inline void EntropyTimestepController::push( const Data& data )
             }
 
             m_data_queue.pop();
-            m_positions.push_back( m_max_position_end[0] );
-            m_positions.push_back( m_max_position_end[1] );
-            m_positions.push_back( m_max_position_end[2] );
+            m_path_entropies.push_back( m_max_entropies.front() );
+            m_max_entropies.pop();
+            m_path_positions.push_back( m_max_position_end[0] );
+            m_path_positions.push_back( m_max_position_end[1] );
+            m_path_positions.push_back( m_max_position_end[2] );
             for ( size_t i = 0; i < m_interval - 1; i++ )
             {
                 const auto data_front = m_data_queue.front();
                 const auto rotation = m_path.front();
                 this->process( data_front, rotation );
                 const auto p = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, 12.0f, 0.0f } ), rotation );
-                m_positions.push_back( p[0] );
-                m_positions.push_back( p[1] );
-                m_positions.push_back( p[2] );
+                m_path_entropies.push_back( m_max_entropy );
+                m_path_positions.push_back( p[0] );
+                m_path_positions.push_back( p[1] );
+                m_path_positions.push_back( p[2] );
                 m_data_queue.pop();
                 m_path.pop();
             }

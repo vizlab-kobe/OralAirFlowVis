@@ -37,7 +37,8 @@ inline bool EntropyControlledAdaptor::dump()
         const auto basedir = BaseClass::outputDirectory().baseDirectoryName() + "/";
         ret = timer_list.write( basedir + "ent_proc_time.csv" );
 
-        this->output_positions( Controller::positions() );
+        this->output_path_entropies( Controller::pathEntropies() );
+        this->output_path_positions( Controller::pathPositions() );
     }
 
     return BaseClass::dump() && ret;
@@ -101,10 +102,12 @@ inline void EntropyControlledAdaptor::execRendering()
 
         // Distribute the index indicates the max entropy image
         BaseClass::world().broadcast( max_index );
+        BaseClass::world().broadcast( max_entropy );
         const auto max_position = BaseClass::viewpoint().at( max_index ).position;
         const auto max_rotation = BaseClass::viewpoint().at( max_index ).rotation;
         Controller::setMaxIndex( max_index );
         Controller::setMaxRotation( max_rotation );
+        Controller::setMaxEntropy( max_entropy );
 
         if( Controller::previousData().empty() )
         {
@@ -146,6 +149,8 @@ inline void EntropyControlledAdaptor::execRendering()
         const auto l = kvs::Vec3( { 0.0f, 0.0f, 0.0f } );
         const auto location = InSituVis::Viewpoint::Location( i, d, p, u, rotation, l );
         auto frame_buffer = BaseClass::readback( location );
+        const auto path_entropy = Controller::entropy( frame_buffer );
+        Controller::setMaxEntropy( path_entropy );
 
         kvs::Timer timer( kvs::Timer::Start );
         if ( BaseClass::world().rank() == BaseClass::world().root() )
@@ -252,20 +257,37 @@ inline void EntropyControlledAdaptor::output_entropy_table(
     table.close();
 }
 
-inline void EntropyControlledAdaptor::output_positions(
-    const std::vector<float> positions )
+inline void EntropyControlledAdaptor::output_path_entropies(
+    const std::vector<float> path_entropies )
 {
-    const auto output_filename =  "output_positions";
+    const auto output_filename =  "output_path_entropies";
+    const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".csv";
+    std::ofstream path_entropy( filename );
+    const auto interval = BaseClass::analysisInterval();
+
+    path_entropy << "Time,Entropy" << std::endl;
+    for( size_t i = 0; i < path_entropies.size(); i++ )
+    {
+        path_entropy << interval * i << "," << path_entropies[i] << std::endl;
+    }
+
+    path_entropy.close();
+}
+
+inline void EntropyControlledAdaptor::output_path_positions(
+    const std::vector<float> path_positions )
+{
+    const auto output_filename =  "output_path_positions";
     const auto filename = BaseClass::outputDirectory().baseDirectoryName() + "/" + output_filename + ".csv";
     std::ofstream position( filename );
     const auto interval = BaseClass::analysisInterval();
 
     position << "Time,X,Y,Z" << std::endl;
-    for( size_t i = 0; i < positions.size() / 3; i++ )
+    for( size_t i = 0; i < path_positions.size() / 3; i++ )
     {
-        const auto x = positions[ 3 * i ];
-        const auto y = positions[ 3 * i + 1 ];
-        const auto z = positions[ 3 * i + 2 ];
+        const auto x = path_positions[ 3 * i ];
+        const auto y = path_positions[ 3 * i + 1 ];
+        const auto z = path_positions[ 3 * i + 2 ];
         position << interval * i << "," << x << "," << y << "," << z << std::endl;
     }
 

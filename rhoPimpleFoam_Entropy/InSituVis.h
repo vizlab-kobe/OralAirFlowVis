@@ -110,7 +110,7 @@ public:
         //        return entropy;
         //    } );
         this->setEntropyInterval( 30 ); // L: entropy calculation time interval
-        //this->setEntropyInterval( 3 ); // L: entropy calculation time interval
+        //this->setEntropyInterval( 1 ); // L: entropy calculation time interval
 #endif
 
         // Set visualization pipeline.
@@ -132,7 +132,13 @@ public:
 #if defined( IN_SITU_VIS__VIEWPOINT__SINGLE )
         using Viewpoint = ::InSituVis::Viewpoint;
         //auto location = Viewpoint::Location( {0, 0, 12} ); // Default viewpoint
-        auto location = Viewpoint::Location( {7, 5, 6} );
+        float r = 12.0f;
+        float theta = kvs::Math::pi / 4.0f;
+        float phi = kvs::Math::pi / 4.0f;
+        float x = r * std::sin( theta ) * std::sin( phi );
+        float y = r * std::cos( theta );
+        float z = r * std::sin( theta ) * std::cos( phi );
+        auto location = Viewpoint::Location( { x, y, z } );
         //auto dir = Viewpoint::Direction::Omni;
         //auto location = Viewpoint::Location( dir, {-1, -0.4, 1} );
         auto vp = Viewpoint( location );
@@ -460,7 +466,8 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
         const auto min_value = volume.minValue();
         const auto max_value = volume.maxValue();
         //auto t = kvs::TransferFunction( kvs::ColorMap::CoolWarm() );
-        auto t = kvs::TransferFunction( kvs::ColorMap::BrewerSpectral() );
+        //auto t = kvs::TransferFunction( kvs::ColorMap::BrewerSpectral() );
+        auto t = kvs::TransferFunction( kvs::ColorMap::BrewerRdBu() );
         t.setRange( min_value, max_value );
 
         // Create new object

@@ -63,8 +63,11 @@ private:
     void output_entropy_table(
         const std::vector<float> entropies );
     
-    void output_positions(
-        const std::vector<float> positions );
+    void output_path_entropies(
+        const std::vector<float> path_entropies );
+
+    void output_path_positions(
+        const std::vector<float> path_positions );
 };
 
 } // end of namespace mpi

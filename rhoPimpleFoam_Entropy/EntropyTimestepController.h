@@ -29,6 +29,7 @@ public:
     using EntropyFunction = std::function<float(const FrameBuffer&)>;
 
     static float Entropy( const FrameBuffer& frame_buffer );
+    static float LightnessEntropy( const FrameBuffer& frame_buffer );
     static float ColorEntropy( const FrameBuffer& frame_buffer );
     static float DepthEntropy( const FrameBuffer& frame_buffer );
 
@@ -42,7 +43,9 @@ private:
     kvs::Vec3 m_max_position_start;
     kvs::Vec3 m_max_position_middle;
     kvs::Vec3 m_max_position_end;
-    std::vector<float> m_positions;
+    std::vector<float> m_path_positions;
+    std::vector<float> m_path_entropies;
+    float m_max_entropy;
     kvs::Quaternion m_max_rotation;
     kvs::Quaternion m_erp_rotation;
     DataQueue m_data_queue{}; ///< data queue
@@ -50,6 +53,7 @@ private:
     std::queue<kvs::Quaternion> m_path;
     EntropyFunction m_entropy_function = Entropy;
     std::queue<kvs::Quaternion> m_max_rotations;
+    std::queue<float> m_max_entropies;
     size_t count = 0;
 
 public:
@@ -62,6 +66,7 @@ public:
     kvs::Vec3 maxPositionStart() const { return m_max_position_start; }
     kvs::Vec3 maxPositionMiddle() const { return m_max_position_middle; }
     kvs::Vec3 maxPositionEnd() const { return m_max_position_end; }
+    float maxEntropy() const { return m_max_entropy; }
     kvs::Quaternion maxRotation() const { return m_max_rotation; }
     kvs::Quaternion erpRotation() const { return m_erp_rotation; }
 
@@ -72,12 +77,14 @@ public:
     void setMaxPositionStart( const kvs::Vec3& position ) { m_max_position_start = position; }
     void setMaxPositionMiddle( const kvs::Vec3& position ) { m_max_position_middle = position; }
     void setMaxPositionEnd( const kvs::Vec3& position ) { m_max_position_end = position; }
+    void setMaxEntropy( const float entropy ) { m_max_entropy = entropy; }
     void setMaxRotation( const kvs::Quaternion& rotation ) { m_max_rotation = rotation; }
     void setErpRotation( const kvs::Quaternion& rotation ) { m_erp_rotation = rotation; }
 
     const DataQueue& dataQueue() const { return m_data_queue; }
     const Data& previousData() const { return m_previous_data; }
-    const std::vector<float>& positions() const { return m_positions; }
+    const std::vector<float>& pathPositions() const { return m_path_positions; }
+    const std::vector<float>& pathEntropies() const { return m_path_entropies; }
     bool isCacheEnabled() const { return m_cache_enabled; }
     void setCacheEnabled( const bool enabled = true ) { m_cache_enabled = enabled; }
     bool isFinalStep() const { return m_final_step; }
