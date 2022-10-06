@@ -109,8 +109,8 @@ public:
         //        // calc entropy
         //        return entropy;
         //    } );
-        this->setEntropyInterval( 30 ); // L: entropy calculation time interval
-        //this->setEntropyInterval( 1 ); // L: entropy calculation time interval
+        //this->setEntropyInterval( 30 ); // L: entropy calculation time interval
+        this->setEntropyInterval( 1 ); // L: entropy calculation time interval
 #endif
 
         // Set visualization pipeline.
