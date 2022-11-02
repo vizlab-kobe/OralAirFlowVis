@@ -292,7 +292,7 @@ inline void EntropyTimestepController::push( const Data& data )
                         const auto q4 = m_max_rotations.front();
                         m_max_rotations.pop();
                         
-                        //this->createPathSlerp( q2, q3, m_interval );
+                        //his->createPathSlerp( q2, q3, m_interval );
                         this->createPathSquad( q1, q2, q3, q4, m_interval );
                         
                         m_data_queue.pop();

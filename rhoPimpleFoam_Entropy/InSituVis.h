@@ -109,8 +109,8 @@ public:
         //        // calc entropy
         //        return entropy;
         //    } );
-        //this->setEntropyInterval( 30 ); // L: entropy calculation time interval
-        this->setEntropyInterval( 1 ); // L: entropy calculation time interval
+        this->setEntropyInterval( 30 ); // L: entropy calculation time interval
+        //this->setEntropyInterval( 1 ); // L: entropy calculation time interval
 #endif
 
         // Set visualization pipeline.
@@ -466,7 +466,6 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
         const auto min_value = volume.minValue();
         const auto max_value = volume.maxValue();
         //auto t = kvs::TransferFunction( kvs::ColorMap::CoolWarm() );
-        //auto t = kvs::TransferFunction( kvs::ColorMap::BrewerSpectral() );
         auto t = kvs::TransferFunction( kvs::ColorMap::BrewerRdBu() );
         t.setRange( min_value, max_value );
 
