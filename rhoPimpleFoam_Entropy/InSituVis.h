@@ -23,7 +23,8 @@
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 #include <random>
 #include <InSituVis/Lib/Adaptor.h>
-#include "EntropyControlledAdaptor_mpi.h"
+//#include "EntropyControlledAdaptor_mpi.h"
+#include <InSituVis/Lib/CameraPathControlledAdaptor_mpi.h>
 
 // Adaptor setting
 #define IN_SITU_VIS__ADAPTOR__ENTROPY_TIMESTEP_CONTROLL
@@ -42,7 +43,8 @@
 
 
 #if defined( IN_SITU_VIS__ADAPTOR__ENTROPY_TIMESTEP_CONTROLL )
-namespace { using Adaptor = local::mpi::EntropyControlledAdaptor; }
+//namespace { using Adaptor = local::mpi::EntropyControlledAdaptor; }
+namespace { using Adaptor = InSituVis::mpi::CameraPathControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #else
@@ -109,6 +111,7 @@ public:
         //        // calc entropy
         //        return entropy;
         //    } );
+//        this->setEntropyInterval( 30 ); // L: entropy calculation time interval
         this->setEntropyInterval( 30 ); // L: entropy calculation time interval
         //this->setEntropyInterval( 1 ); // L: entropy calculation time interval
 #endif
