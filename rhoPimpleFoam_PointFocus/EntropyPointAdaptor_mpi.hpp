@@ -174,52 +174,55 @@ inline void EntropyPointAdaptor::execRendering()
 }
 
 inline EntropyPointAdaptor::coord EntropyPointAdaptor::regionEntropy(const BaseClass::FrameBuffer& frame_buffer, int M, int N){
-    std::vector<float> entropies;
     coord m_coord;
-    float max = 0.0f;
+    float max = -1.0f;
     const auto width = BaseClass::imageWidth();
     const auto height = BaseClass::imageHeight();
-    auto w_width = width/M;
-    auto h_height = height/N;
-    kvs::ValueArray<size_t> histogram( 256 );
+    int w_width = width/M;
+    int h_height = height/N;
+    kvs::ValueArray<size_t> l_histogram( 256 );
+    kvs::ValueArray<size_t> d_histogram( 256 );
     size_t n = 0;
     const auto& depth_buffer = frame_buffer.depth_buffer;
     const auto& color_buffer = frame_buffer.color_buffer;
     for(int i=0; i<N; i++){
         for(int j=0; j<M; j++){
-            auto framebuffer = BaseClass::FrameBuffer(w_width, h_height);
-            histogram.fill( 0 );
-            for(int k=h_height*j; k<h_height*(i+1) ;k++ ){
-                for(int l=w_width*j; j<w_width*(j+1); l++){
+            l_histogram.fill( 0 );
+            d_histogram.fill( 0 );
+            for(int k=h_height*i; k<h_height*(i+1) ;k++ ){
+                for(int l=w_width*j; l<w_width*(j+1); l++){
                     auto depth = depth_buffer[width*k+l];
                     auto r = color_buffer[4*(width*k+l)];
                     auto g = color_buffer[4*(width*k+l)+1];
                     auto b = color_buffer[4*(width*k+l)+2];
                     auto lab = kvs::LabColor( kvs::RGBColor( r, g, b ) );
-
                     if ( depth < 1.0f ){
-                        int m = static_cast<int>( lab.l() / 100 * 256 );
-                        if( m > 255 ) m = 255;
-                        histogram[m] += 1;
+                        int m1 = static_cast<int>( lab.l() / 100 * 256 );
+                        if( m1 > 255 ) m1 = 255;
+                        l_histogram[m1] += 1;
+                        n += 1;
+                    }
+                    if ( depth < 1.0f ){
+                        const auto m2 = static_cast<int>( depth * 256 );
+                        d_histogram[m2] += 1;
                         n += 1;
                     }
                 }
             }
             float entropy = 0.0f;
             const auto log2 = std::log( 2.0f );
-            for ( const auto h : histogram )
-            {
-                const auto p = static_cast<float>( h ) / n;
-                if ( p > 0.0f ) { entropy -= p * std::log( p ) / log2; }
+            for ( const auto h : l_histogram ){
+                const auto p1 = static_cast<float>( h ) / n;
+                if ( p1 > 0.0f ) { entropy -= p1 * std::log( p1 ) / log2; }
             }
-            entropies.push_back(entropy);///
-            max = *max_element(entropies.begin(), entropies.end());
-            if(i!=0 && j!=0){
-                if(max<entropy){
+            for ( const auto h : d_histogram ){
+                const auto p2 = static_cast<float>( h ) / n;
+                if ( p2 > 0.0f ) { entropy -= p2 * std::log( p2 ) / log2; }
+            }
+            if(max<entropy){
                 m_coord.x = w_width*j+(w_width/2);
                 m_coord.y = h_height*i+(h_height/2);
                 m_coord.depth_buffer = depth_buffer[width*m_coord.x+m_coord.y];
-                }
             }
         }
     }
