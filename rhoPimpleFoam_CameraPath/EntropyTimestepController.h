@@ -6,6 +6,7 @@
 /*****************************************************************************/
 #pragma once
 #include <queue>
+#include <tuple>
 #include <functional>
 #include <kvs/VolumeObjectBase>
 #include <InSituVis/Lib/Adaptor_mpi.h>
@@ -38,47 +39,42 @@ private:
 
     bool m_cache_enabled = true; ///< flag for data caching
     bool m_final_step = false;
-    size_t m_path_index = 0;
     size_t m_max_index = 0;
-    kvs::Vec3 m_max_position_start;
-    kvs::Vec3 m_max_position_middle;
-    kvs::Vec3 m_max_position_end;
+    float m_max_entropy;
+    kvs::Vec3 m_max_position;
+    kvs::Quaternion m_max_rotation;
+    float m_erp_radius;
+    kvs::Quaternion m_erp_rotation;
+    std::queue<float> m_max_entropies;
+    std::queue<kvs::Vec3> m_max_positions;
+    std::queue<kvs::Quaternion> m_max_rotations;
+    std::queue<std::tuple<float, kvs::Quaternion>> m_path;
     std::vector<float> m_path_positions;
     std::vector<float> m_path_entropies;
-    float m_max_entropy;
-    kvs::Quaternion m_max_rotation;
-    kvs::Quaternion m_erp_rotation;
     DataQueue m_data_queue{}; ///< data queue
     Data m_previous_data{}; ///< dataset at previous time-step
-    std::queue<kvs::Quaternion> m_path;
     EntropyFunction m_entropy_function = Entropy;
-    std::queue<kvs::Quaternion> m_max_rotations;
-    std::queue<float> m_max_entropies;
-    size_t count = 0;
-
+    
 public:
     EntropyTimestepController() = default;
     virtual ~EntropyTimestepController() = default;
 
     size_t entropyInterval() const { return m_interval; }
-    size_t pathIndex() const { return m_path_index; }
     size_t maxIndex() const { return m_max_index; }
-    kvs::Vec3 maxPositionStart() const { return m_max_position_start; }
-    kvs::Vec3 maxPositionMiddle() const { return m_max_position_middle; }
-    kvs::Vec3 maxPositionEnd() const { return m_max_position_end; }
     float maxEntropy() const { return m_max_entropy; }
+    kvs::Vec3 maxPosition() const { return m_max_position; }
     kvs::Quaternion maxRotation() const { return m_max_rotation; }
+    float erpRadius() const { return m_erp_radius; }
     kvs::Quaternion erpRotation() const { return m_erp_rotation; }
 
     void setEntropyInterval( const size_t interval ) { m_interval = interval; }
     void setEntropyFunction( EntropyFunction func ) { m_entropy_function = func; }
 
     void setMaxIndex( const size_t index ) { m_max_index = index; }
-    void setMaxPositionStart( const kvs::Vec3& position ) { m_max_position_start = position; }
-    void setMaxPositionMiddle( const kvs::Vec3& position ) { m_max_position_middle = position; }
-    void setMaxPositionEnd( const kvs::Vec3& position ) { m_max_position_end = position; }
     void setMaxEntropy( const float entropy ) { m_max_entropy = entropy; }
+    void setMaxPosition( const kvs::Vec3& position ) { m_max_position = position; }
     void setMaxRotation( const kvs::Quaternion& rotation ) { m_max_rotation = rotation; }
+    void setErpRadius( const float radius ) { m_erp_radius = radius; }
     void setErpRotation( const kvs::Quaternion& rotation ) { m_erp_rotation = rotation; }
 
     const DataQueue& dataQueue() const { return m_data_queue; }
@@ -93,14 +89,18 @@ public:
 protected:
     void push( const Data& data );
     virtual void process( const Data& data ) {}
-    virtual void process( const Data& data, const kvs::Quaternion& rotation ) {}
+    virtual void process( const Data& data, const float radius, const kvs::Quaternion& rotation ) {}
     virtual float entropy( const FrameBuffer& frame_buffer );
     void createPathSlerp(
+        const float r1,
+        const float r2,
         const kvs::Quaternion& q1,
         const kvs::Quaternion& q2,
         const size_t point_interval
     );
     void createPathSquad(
+        const float r2,
+        const float r3,
         const kvs::Quaternion& q1,
         const kvs::Quaternion& q2,
         const kvs::Quaternion& q3,

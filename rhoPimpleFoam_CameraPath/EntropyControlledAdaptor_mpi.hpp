@@ -106,21 +106,9 @@ inline void EntropyControlledAdaptor::execRendering()
         const auto max_position = BaseClass::viewpoint().at( max_index ).position;
         const auto max_rotation = BaseClass::viewpoint().at( max_index ).rotation;
         Controller::setMaxIndex( max_index );
+        Controller::setMaxPosition( max_position );
         Controller::setMaxRotation( max_rotation );
         Controller::setMaxEntropy( max_entropy );
-
-        if( Controller::previousData().empty() )
-        {
-            Controller::setMaxPositionStart( max_position );
-            Controller::setMaxPositionMiddle( max_position );
-            Controller::setMaxPositionEnd( max_position );
-        }
-        else
-        {
-            Controller::setMaxPositionStart( Controller::maxPositionMiddle() );
-            Controller::setMaxPositionMiddle( Controller::maxPositionEnd() );
-            Controller::setMaxPositionEnd( max_position );
-        }
 
         // Output the rendering images and the heatmap of entropies.
         kvs::Timer timer( kvs::Timer::Start );
@@ -141,16 +129,18 @@ inline void EntropyControlledAdaptor::execRendering()
     }
     else
     {
+        auto radius = Controller::erpRadius();
         auto rotation = Controller::erpRotation();
         const size_t i = 999999;
         const auto d = InSituVis::Viewpoint::Direction::Uni;
-        const auto p = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, 12.0f, 0.0f } ), rotation );
+        const auto p = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, radius, 0.0f } ), rotation );
         const auto u = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, 0.0f, -1.0f } ), rotation );
         const auto l = kvs::Vec3( { 0.0f, 0.0f, 0.0f } );
         const auto location = InSituVis::Viewpoint::Location( i, d, p, u, rotation, l );
         auto frame_buffer = BaseClass::readback( location );
         const auto path_entropy = Controller::entropy( frame_buffer );
         Controller::setMaxEntropy( path_entropy );
+        Controller::setMaxPosition( p );
 
         kvs::Timer timer( kvs::Timer::Start );
         if ( BaseClass::world().rank() == BaseClass::world().root() )
@@ -176,7 +166,7 @@ inline void EntropyControlledAdaptor::process( const Data& data )
     this->execRendering();
 }
 
-inline void EntropyControlledAdaptor::process( const Data& data, const kvs::Quaternion& rotation )
+inline void EntropyControlledAdaptor::process( const Data& data, const float radius, const kvs::Quaternion& rotation )
 {
     const auto current_step = BaseClass::timeStep();
     {
@@ -196,6 +186,7 @@ inline void EntropyControlledAdaptor::process( const Data& data, const kvs::Quat
 
         // Execute vis. pipeline and rendering.
         Controller::setErpRotation( rotation );
+        Controller::setErpRadius( radius );
         BaseClass::execPipeline( data );
         this->execRendering();
     }
