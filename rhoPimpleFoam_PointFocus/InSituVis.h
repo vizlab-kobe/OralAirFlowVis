@@ -22,7 +22,8 @@
 #include <InSituVis/Lib/SphericalViewpoint.h>
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
-#include "PointFocusAdaptor_mpi.h"
+//#include "PointFocusAdaptor_mpi.h"
+#include "EntropyPointAdaptor_mpi.h"
 #include <random>
 
 // Adaptor setting
@@ -47,7 +48,7 @@ namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__POINT_FOCUS )
-namespace { using Adaptor = local::mpi::PointFocusAdaptor; }
+namespace { using Adaptor = local::mpi::EntropyPointAdaptor; }
 #else
 namespace { using Adaptor = InSituVis::mpi::Adaptor; }
 #endif
