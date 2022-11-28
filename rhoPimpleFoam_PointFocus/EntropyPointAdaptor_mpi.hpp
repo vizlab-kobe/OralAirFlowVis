@@ -86,6 +86,7 @@ inline void EntropyPointAdaptor::execRendering()
             {
                 const auto entropy = Controller::entropy( frame_buffer );
                 entropies.push_back( entropy );
+                //log()<<"l="<<entropy<<std::endl;
                 frame_buffers.push_back( frame_buffer );
 
                 if ( entropy > max_entropy )
@@ -101,40 +102,64 @@ inline void EntropyPointAdaptor::execRendering()
         }
 
         // Distribute the index indicates the max entropy image
+
         BaseClass::world().broadcast( max_index );
         BaseClass::world().broadcast( max_entropy );
         const auto max_position = BaseClass::viewpoint().at( max_index ).position;
         const auto max_rotation = BaseClass::viewpoint().at( max_index ).rotation;
         Controller::setMaxIndex( max_index );
+        Controller::setMaxPosition( max_position );
         Controller::setMaxRotation( max_rotation );
         Controller::setMaxEntropy( max_entropy );
 
-        if( Controller::previousData().empty() )
-        {
-            Controller::setMaxPositionStart( max_position );
-            Controller::setMaxPositionMiddle( max_position );
-            Controller::setMaxPositionEnd( max_position );
-        }
-        else
-        {
-            Controller::setMaxPositionStart( Controller::maxPositionMiddle() );
-            Controller::setMaxPositionMiddle( Controller::maxPositionEnd() );
-            Controller::setMaxPositionEnd( max_position );
-        }
-
-
-
         // Output the rendering images and the heatmap of entropies.
         kvs::Timer timer( kvs::Timer::Start );
+        const auto index = Controller::maxIndex();
+        const auto& location = BaseClass::viewpoint().at( index );
+        const auto& frame_buffer = frame_buffers[ index ];
+        double at1 = 0.0;
+        double at2 = 0.0;
+        double at3 = 0.0;
+        if ( BaseClass::world().isRoot() )
+        {
+        auto m_coord = regionEntropy(frame_buffer,4,4);
+        double winx = m_coord.x;
+        double winy = BaseClass::imageHeight()-m_coord.y-1.0;
+        double winz = -m_coord.depth_buffer;
+        //double winx = (2.0*m_coord.x-BaseClass::imageWidth())/BaseClass::imageWidth();
+        //double winy = (BaseClass::imageHeight()-2.0*m_coord.y)/BaseClass::imageHeight();
+        log()<<"dsdsdsds"<<winx<<","<<winy<<","<<winz<<std::endl;
+        double m[16]; kvs::OpenGL::GetModelViewMatrix( m );
+        double p[16]; kvs::OpenGL::GetProjectionMatrix( p );
+        //kvs::OpenGL::SetViewport(0,0,BaseClass::imageWidth(),BaseClass::imageHeight());
+        int v[4]; kvs::OpenGL::GetViewport( v );
+        /*for(size_t i=0;i<4;i++){
+        log()<<m[4*i]<<" "<<m[4*i+1]<<" "<<m[4*i+2]<<" "<<m[4*i+3]<<std::endl;
+        }
+        for(size_t i=0;i<4;i++){
+        log()<<p[4*i]<<" "<<p[4*i+1]<<" "<<p[4*i+2]<<" "<<p[4*i+3]<<std::endl;
+
+        }
+        for(size_t i=0;i<4;i++){
+        log()<<v[i]<<std::endl;
+        }*/
+
+        kvs::OpenGL::UnProject(winx,winy,winz,m,p,v,&at1,&at2,&at3);
+        }
+        BaseClass::world().broadcast(at1);
+        BaseClass::world().broadcast(at2);
+        BaseClass::world().broadcast(at3);
+        kvs::Vec3 LookAt(at1,at2,at3);
+        log()<<at1<<","<<at2<<","<<at3<<std::endl;
+        const auto l = update_viewpoint(LookAt,location);
+        //const auto l = update_viewpoint(kvs:Vec3({at1,at2,at3}),location);
+        auto f_frame_buffer = BaseClass::readback( l );
         if ( BaseClass::world().isRoot() )
         {
             if ( BaseClass::isOutputImageEnabled() )
             {
-                const auto index = Controller::maxIndex();
-                const auto& location = BaseClass::viewpoint().at( index );
-                const auto& frame_buffer = frame_buffers[ index ];
-                auto m_coord = regionEntropy(frame_buffer,4,4);
-                this->output_color_image( location, frame_buffer );
+                this->output_color_image( l, f_frame_buffer );
+                log()<<"l="<<l.look_at<<std::endl;
                 //this->output_depth_image( location, frame_buffer );
                 this->output_entropy_table( entropies );
             }
@@ -144,16 +169,18 @@ inline void EntropyPointAdaptor::execRendering()
     }
     else
     {
+        auto radius = Controller::erpRadius();
         auto rotation = Controller::erpRotation();
         const size_t i = 999999;
         const auto d = InSituVis::Viewpoint::Direction::Uni;
-        const auto p = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, 12.0f, 0.0f } ), rotation );
+        const auto p = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, radius, 0.0f } ), rotation );
         const auto u = kvs::Quaternion::Rotate( kvs::Vec3( { 0.0f, 0.0f, -1.0f } ), rotation );
         const auto l = kvs::Vec3( { 0.0f, 0.0f, 0.0f } );
         const auto location = InSituVis::Viewpoint::Location( i, d, p, u, rotation, l );
         auto frame_buffer = BaseClass::readback( location );
         const auto path_entropy = Controller::entropy( frame_buffer );
         Controller::setMaxEntropy( path_entropy );
+        Controller::setMaxPosition( p );
 
         kvs::Timer timer( kvs::Timer::Start );
         if ( BaseClass::world().rank() == BaseClass::world().root() )
@@ -189,6 +216,8 @@ inline EntropyPointAdaptor::coord EntropyPointAdaptor::regionEntropy(const BaseC
         for(int j=0; j<M; j++){
             l_histogram.fill( 0 );
             d_histogram.fill( 0 );
+            float depth_sum = 0.0f;
+            int wh = 0;
             for(int k=h_height*i; k<h_height*(i+1) ;k++ ){
                 for(int l=w_width*j; l<w_width*(j+1); l++){
                     auto depth = depth_buffer[width*k+l];
@@ -200,12 +229,11 @@ inline EntropyPointAdaptor::coord EntropyPointAdaptor::regionEntropy(const BaseC
                         int m1 = static_cast<int>( lab.l() / 100 * 256 );
                         if( m1 > 255 ) m1 = 255;
                         l_histogram[m1] += 1;
-                        n += 1;
-                    }
-                    if ( depth < 1.0f ){
                         const auto m2 = static_cast<int>( depth * 256 );
                         d_histogram[m2] += 1;
                         n += 1;
+                        depth_sum += depth;
+                        wh ++;
                     }
                 }
             }
@@ -220,13 +248,37 @@ inline EntropyPointAdaptor::coord EntropyPointAdaptor::regionEntropy(const BaseC
                 if ( p2 > 0.0f ) { entropy -= p2 * std::log( p2 ) / log2; }
             }
             if(max<entropy){
+                max = entropy;
                 m_coord.x = w_width*j+(w_width/2);
                 m_coord.y = h_height*i+(h_height/2);
-                m_coord.depth_buffer = depth_buffer[width*m_coord.x+m_coord.y];
+                if(depth_buffer[width*m_coord.x+m_coord.y == 1.0f])
+                {
+                    m_coord.depth_buffer = depth_sum/wh;
+                }
+                else{
+                    m_coord.depth_buffer = depth_buffer[width*m_coord.x+m_coord.y];
+                }
+
             }
         }
     }
     return m_coord;
+}
+
+inline InSituVis::Viewpoint::Location EntropyPointAdaptor::update_viewpoint( const kvs::Vec3& at,const InSituVis::Viewpoint::Location& location )
+{
+    const auto p0 = location.look_at - location.position;
+    const auto p1 = at - location.position;
+    const auto R = kvs::Quaternion::RotationQuaternion( p0, p1 );
+
+    auto l = InSituVis::Viewpoint::Location(
+        location.direction,
+        location.position,
+        kvs::Quaternion::Rotate( location.up_vector, R ), at );
+    l.index = location.index;
+    l.look_at = at;
+
+    return l;
 }
 inline void EntropyPointAdaptor::process( const Data& data )
 {
@@ -234,7 +286,7 @@ inline void EntropyPointAdaptor::process( const Data& data )
     this->execRendering();
 }
 
-inline void EntropyPointAdaptor::process( const Data& data, const kvs::Quaternion& rotation )
+inline void EntropyPointAdaptor::process( const Data& data, const float radius, const kvs::Quaternion& rotation )
 {
     const auto current_step = BaseClass::timeStep();
     {
@@ -254,6 +306,7 @@ inline void EntropyPointAdaptor::process( const Data& data, const kvs::Quaternio
 
         // Execute vis. pipeline and rendering.
         Controller::setErpRotation( rotation );
+        Controller::setErpRadius( radius );
         BaseClass::execPipeline( data );
         this->execRendering();
     }

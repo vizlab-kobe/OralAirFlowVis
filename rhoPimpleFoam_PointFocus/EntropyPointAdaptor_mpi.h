@@ -56,8 +56,9 @@ protected:
     virtual void execRendering();
 
 private:
+    InSituVis::Viewpoint::Location update_viewpoint( const kvs::Vec3& at,const InSituVis::Viewpoint::Location& location );
     void process( const Data& data );
-    void process( const Data& data , const kvs::Quaternion& rotation );
+    void process( const Data& data, const float radius, const kvs::Quaternion& rotation );
 
     void output_color_image(
         const InSituVis::Viewpoint::Location& location,

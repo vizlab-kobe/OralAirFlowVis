@@ -37,8 +37,8 @@
 //#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
 
 // Viewpoint setting
-#define IN_SITU_VIS__VIEWPOINT__SINGLE
-//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE
+//#define IN_SITU_VIS__VIEWPOINT__SINGLE
+#define IN_SITU_VIS__VIEWPOINT__MULTIPLE
 
 //#define IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES
 
@@ -124,9 +124,9 @@ public:
         auto vp = Viewpoint( location );
         this->setViewpoint( vp );
 #elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
-        using Viewpoint = ::InSituVis::CubicViewpoint;
-        //using Viewpoint = ::InSituVis::SphericalViewpoint;
-        auto dims = kvs::Vec3ui( 3, 3, 3 );
+        //using Viewpoint = ::InSituVis::CubicViewpoint;
+        using Viewpoint = ::InSituVis::SphericalViewpoint;
+        auto dims = kvs::Vec3ui( 1, 3, 6 );
         auto dir = Viewpoint::Direction::Uni;
         //auto dir = Viewpoint::Direction::Omni;
         auto vp = Viewpoint();
