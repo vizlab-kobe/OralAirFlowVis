@@ -26,6 +26,9 @@
 #include "EntropyPointAdaptor_mpi.h"
 #include <random>
 
+#include "CameraFocusControlledAdaptor_mpi.h"
+
+
 // Adaptor setting
 //#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
 //#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
@@ -48,7 +51,8 @@ namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__POINT_FOCUS )
-namespace { using Adaptor = local::mpi::EntropyPointAdaptor; }
+//namespace { using Adaptor = local::mpi::EntropyPointAdaptor; }
+namespace { using Adaptor = local::mpi::CameraFocusControlledAdaptor; }
 #else
 namespace { using Adaptor = InSituVis::mpi::Adaptor; }
 #endif
