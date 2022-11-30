@@ -19,7 +19,7 @@ public:
     using Location = Viewpoint::Location;
 
 private:
-    kvs::Vec2i m_ndivs{ 10, 10 }; ///< number of divisions for frame buffer
+    kvs::Vec2i m_ndivs{ 20, 20 }; ///< number of divisions for frame buffer
 
 public:
     CameraFocusControlledAdaptor( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root ) {}

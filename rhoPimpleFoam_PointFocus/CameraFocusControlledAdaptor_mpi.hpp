@@ -3,12 +3,6 @@
 #include <kvs/ObjectManager>
 
 
-namespace
-{
-
-
-} // end of namespace
-
 namespace local
 {
 
@@ -44,7 +38,8 @@ inline void CameraFocusControlledAdaptor::execRendering()
                 entropies.push_back( entropy );
                 frame_buffers.push_back( frame_buffer );
 
-                if ( entropy > max_entropy )
+                if ( entropy > max_entropy &&
+                     std::abs( entropy - max_entropy ) > 1.e-3 )
                 {
                     max_entropy = entropy;
                     max_index = location.index;
@@ -73,16 +68,12 @@ inline void CameraFocusControlledAdaptor::execRendering()
         {
             const auto& frame_buffer = frame_buffers[ max_index ];
             const auto at_w = this->look_at_in_window( frame_buffer );
-
-            log() << "at_w = " << at_w << std::endl;
-
             at = this->window_to_object( at_w, max_location );
         }
 
         // Readback frame buffer rendererd from updated location.
         BaseClass::world().broadcast( at.data(), sizeof(float) * 3 );
         const auto location = this->update_location( max_location, at );
-//        const auto location = max_location;
         const auto frame_buffer = BaseClass::readback( location );
 
         // Output the rendering images and the heatmap of entropies.
@@ -91,9 +82,6 @@ inline void CameraFocusControlledAdaptor::execRendering()
         {
             if ( BaseClass::isOutputImageEnabled() )
             {
-//                const auto index = Controller::maxIndex();
-//                const auto& location = BaseClass::viewpoint().at( index );
-//                const auto& frame_buffer = frame_buffers[ index ];
                 BaseClass::outputColorImage( location, frame_buffer );
                 //BaseClass::outputDepthImage( location, frame_buffer );
                 BaseClass::outputEntropyTable( entropies );
@@ -145,8 +133,8 @@ inline kvs::Vec3 CameraFocusControlledAdaptor::look_at_in_window( const FrameBuf
     auto get_center = [&] ( int i, int j ) -> kvs::Vec2i
     {
         return {
-            i * cw + static_cast<int>( cw * 0.5 ),
-            j * ch + static_cast<int>( ch * 0.5 ) };
+            static_cast<int>( i * cw + cw * 0.5 ),
+            static_cast<int>( j * ch + ch * 0.5 ) };
     };
 
     auto get_depth = [&] ( const FrameBuffer& buffer ) -> float
@@ -187,6 +175,7 @@ inline kvs::Vec3 CameraFocusControlledAdaptor::look_at_in_window( const FrameBuf
             const auto e = Controller::entropy( cropped_buffer );
             if ( e > max_entropy )
             {
+                max_entropy = e;
                 center = get_center( i, j );
                 depth = get_depth( cropped_buffer );
             }
@@ -216,16 +205,11 @@ inline kvs::Vec3 CameraFocusControlledAdaptor::window_to_object(
 
     const auto xv = kvs::Xform( camera->viewingMatrix() );
     const auto xp = kvs::Xform( camera->projectionMatrix() );
+    const auto xo = manager->xform();
+    const auto xm = xv * xo;
 
     // Restore camera info.
     camera->setPosition( p0, a0, u0 );
-
-//    const auto xo = manager->hasObject() ?
-//        manager->object()->xform() : manager->xform();
-//    const auto xo = manager->xform();
-    const auto xo = manager->object()->xform();
-//    const auto xm = xo * xv;
-    const auto xm = xv* xo;
 
     auto x_to_a = [] ( const kvs::Xform& x, double a[16] )
     {
@@ -258,7 +242,7 @@ CameraFocusControlledAdaptor::update_location( const Location& location, const k
     auto l = InSituVis::Viewpoint::Location(
         location.direction,
         location.position,
-        kvs::Quaternion::Rotate( location.up_vector, R ), at );
+        kvs::Quat::Rotate( location.up_vector, R ), at );
     l.index = location.index;
     l.look_at = at;
 
