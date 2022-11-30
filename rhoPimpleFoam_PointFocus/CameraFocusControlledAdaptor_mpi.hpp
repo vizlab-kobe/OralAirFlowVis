@@ -134,7 +134,7 @@ inline kvs::Vec3 CameraFocusControlledAdaptor::look_at_in_window( const FrameBuf
     {
         return {
             static_cast<int>( i * cw + cw * 0.5 ),
-            static_cast<int>( j * ch + ch * 0.5 ) };
+            static_cast<int>( h - ( j * ch + ch * 0.5 ) ) };
     };
 
     auto get_depth = [&] ( const FrameBuffer& buffer ) -> float
@@ -173,7 +173,8 @@ inline kvs::Vec3 CameraFocusControlledAdaptor::look_at_in_window( const FrameBuf
         {
             this->crop_frame_buffer( frame_buffer, { i, j }, &cropped_buffer );
             const auto e = Controller::entropy( cropped_buffer );
-            if ( e > max_entropy )
+            if ( e > max_entropy &&
+                 std::abs( e - max_entropy ) > 1.e-3 )
             {
                 max_entropy = e;
                 center = get_center( i, j );
