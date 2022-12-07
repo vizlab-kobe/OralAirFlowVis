@@ -23,7 +23,6 @@
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 //#include "PointFocusAdaptor_mpi.h"
-#include "EntropyPointAdaptor_mpi.h"
 #include <random>
 
 #include "CameraFocusControlledAdaptor_mpi.h"
@@ -35,8 +34,8 @@
 #define IN_SITU_VIS__ADAPTOR__POINT_FOCUS
 
 // Pipeline setting
-#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
-//#define IN_SITU_VIS__PIPELINE__ISOSURFACE
+//#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
+#define IN_SITU_VIS__PIPELINE__ISOSURFACE
 //#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
 
 // Viewpoint setting
@@ -51,7 +50,6 @@ namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__POINT_FOCUS )
-//namespace { using Adaptor = local::mpi::EntropyPointAdaptor; }
 namespace { using Adaptor = local::mpi::CameraFocusControlledAdaptor; }
 #else
 namespace { using Adaptor = InSituVis::mpi::Adaptor; }
@@ -75,6 +73,14 @@ public:
     static Pipeline ExternalFace( const kvs::mpi::Communicator& world );
     static Pipeline StochasticRendering( const size_t repeats );
 
+    /*void setFinalTimeStepIndex( size_t index )
+    {
+        m_final_time_step_index = index;
+#if defined( IN_SITU_VIS__ADAPTOR__POINT_FOCUS )
+        this->setFinalTimeStep( m_final_time_step_index );
+#endif
+    }*/
+
 private:
     kvs::PolygonObject m_boundary_mesh; ///< boundary mesh
     kvs::mpi::StampTimer m_sim_timer{ BaseClass::world() }; ///< timer for sim. process
@@ -82,6 +88,7 @@ private:
     kvs::mpi::StampTimer m_vis_timer{ BaseClass::world() }; ///< timer for vis. process
     kvs::Real64 m_whole_min_value = 0.0; ///< min. value of whole time-varying volume data
     kvs::Real64 m_whole_max_value = 0.0; ///< max. value of whole time-varying volume data
+   // size_t m_final_time_step_index = 0;
 
 public:
     InSituVis( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root )
@@ -97,6 +104,21 @@ public:
         // Time intervals.
         this->setAnalysisInterval( 20 ); // l: analysis time interval
 //        this->setAnalysisInterval( 100 ); // l: analysis time interval
+#if defined( IN_SITU_VIS__ADAPTOR__POINT_FOCUS )
+        //this->setEntropyFunction( BaseClass::DepthEntropy ); // default function
+        //this->setEntropyFunction( BaseClass::ColorEntropy ); // pre-defined function
+        //this->setEntropyFunction(                            // user specified function
+        //    [] ( const BaseClass::FrameBuffer& frame_buffer )
+        //    {
+        //        float entropy = 0.0f;
+        //        // calc entropy
+        //        return entropy;
+        //    } );
+        //this->setEntropyInterval( 30 ); // L: entropy calculation time interval
+        //this->setEntropyIntervals( 30 ); // L: entropy calculation time interval
+        //this->setEntropyInterval( 1 ); // L: entropy calculation time interval
+#endif
+
 #if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
         this->setValidationInterval( 4 ); // L: validation time interval
         this->setSamplingGranularity( 2 ); // R: granularity for the pattern A
@@ -121,8 +143,13 @@ public:
         // Set viewpoint(s)
 #if defined( IN_SITU_VIS__VIEWPOINT__SINGLE )
         using Viewpoint = ::InSituVis::Viewpoint;
-        //auto location = Viewpoint::Location( {0, 0, 12} ); // Default viewpoint
-        auto location = Viewpoint::Location( {7, 5, 6} );
+        auto dir = Viewpoint::Direction::Uni;
+        kvs::Vec3 p = { 0, 0, 12 } ;
+        kvs::Vec3 l = { 0, 0, 0 } ;
+        kvs::Vec3 u = { 0, 1, 0 };
+        //auto location = Viewpoint::Location( {7, 5, 6} );
+        auto location = InSituVis::Viewpoint::Location( dir, p, u, l );
+        //auto location = Viewpoint::Location( {7, 5, 6} );
         //auto dir = Viewpoint::Direction::Omni;
         //auto location = Viewpoint::Location( dir, {-1, -0.4, 1} );
         auto vp = Viewpoint( location );
@@ -130,7 +157,7 @@ public:
 #elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
         //using Viewpoint = ::InSituVis::CubicViewpoint;
         using Viewpoint = ::InSituVis::SphericalViewpoint;
-        auto dims = kvs::Vec3ui( 1, 3, 6 );
+        auto dims = kvs::Vec3ui( 1, 5, 10 );
         auto dir = Viewpoint::Direction::Uni;
         //auto dir = Viewpoint::Direction::Omni;
         auto vp = Viewpoint();

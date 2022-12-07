@@ -1,6 +1,15 @@
+/*****************************************************************************/
+/**
+ *  @file   CameraPathControlledAdaptor_mpi.h
+ *  @author Ken Iwata, Naohisa Sakamoto
+ */
+/*****************************************************************************/
 #pragma once
 #if defined( KVS_SUPPORT_MPI )
-#include <InSituVis/Lib/CameraPathControlledAdaptor_mpi.h>
+#include <InSituVis/Lib/Adaptor_mpi.h>
+#include "CameraFocusController.h"
+#include <list>
+#include <queue>
 
 
 namespace local
@@ -9,27 +18,70 @@ namespace local
 namespace mpi
 {
 
-class CameraFocusControlledAdaptor : public InSituVis::mpi::CameraPathControlledAdaptor
+class CameraFocusControlledAdaptor : public InSituVis::mpi::Adaptor, public local::CameraFocusController
 {
 public:
-    using BaseClass = InSituVis::mpi::CameraPathControlledAdaptor;
-    using Controller = BaseClass::Controller;
+    using BaseClass = InSituVis::mpi::Adaptor;
     using FrameBuffer = BaseClass::FrameBuffer;
-    using Viewpoint = InSituVis::Viewpoint;
-    using Location = Viewpoint::Location;
+    using Controller = local::CameraFocusController;
+    using Viewpoint = InSituVis::Viewpoint;//add
+    using Location = Viewpoint::Location;//add
 
 private:
+    bool m_enable_output_image_depth = false;
+    bool m_enable_output_evaluation_image = false; ///< if true, all of evaluation images will be output
+    bool m_enable_output_evaluation_image_depth = false; ///< if true, all of evaluation depth images will be output
+    kvs::mpi::StampTimer m_entr_timer{ BaseClass::world() }; ///< timer for entropy evaluation
+    size_t m_final_time_step = 0;
+
+    //add
     kvs::Vec2i m_ndivs{ 20, 20 }; ///< number of divisions for frame buffer
 
 public:
     CameraFocusControlledAdaptor( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root ) {}
     virtual ~CameraFocusControlledAdaptor() = default;
 
+    void setOutputEvaluationImageEnabled(
+        const bool enable = true,
+        const bool enable_depth = false );
+
+    kvs::mpi::StampTimer& entrTimer() { return m_entr_timer; }
+
+    virtual void exec( const BaseClass::SimTime sim_time = {} );
+    virtual bool dump();
+    void setFinalTimeStep( const size_t step ) { m_final_time_step = step; }
+
+    //add
     void setNumberOfDivisions( const kvs::Vec2i& ndivs ) { m_ndivs = ndivs; }
 
 protected:
-    virtual void execRendering();
+    bool isEntropyStep();
+    bool isFinalTimeStep();
 
+    virtual void execRendering();
+    virtual void process( const Data& data );
+    //virtual void process( const Data& data , const float radius, const kvs::Quaternion& rotation );
+    //add
+    virtual void process( const Data& data, const float radius, const kvs::Quaternion& rotation, const kvs::Vec3& foc );
+
+    void outputColorImage(
+        const InSituVis::Viewpoint::Location& location,
+        const FrameBuffer& frame_buffer );
+
+    void outputDepthImage(
+        const InSituVis::Viewpoint::Location& location,
+        const FrameBuffer& frame_buffer );
+
+    void outputEntropyTable(
+        const std::vector<float> entropies );
+
+    void outputPathEntropies(
+        const std::vector<float> path_entropies );
+
+    void outputPathPositions(
+        const std::vector<float> path_positions );
+
+//add
 private:
     kvs::Vec3 look_at_in_window( const FrameBuffer& frame_buffer );
     kvs::Vec3 window_to_object( const kvs::Vec3 win, const Location& location );

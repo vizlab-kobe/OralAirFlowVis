@@ -1,0 +1,215 @@
+namespace local
+{
+
+inline void CameraFocusController::push2( const Data& data )
+{
+    if( !( this->isFinalStep() ) )
+    {
+        if ( m_previous_data.empty() )
+        {
+            // Initial step.
+            this->process( data );
+            m_previous_data = data;
+            m_max_entropies.push( m_max_entropy );
+            m_max_positions.push( m_max_position );
+            m_max_rotations.push( m_max_rotation );
+            m_max_rotations.push( m_max_rotation );
+            m_max_focus_points.push( m_max_focus_point );
+            m_data_queue.push( data );
+        }
+        else
+        {
+            if ( this->isCacheEnabled() )
+            {
+                if( m_data_queue.size() % m_interval == 0 )
+                {
+                    this->process( data );
+                    m_max_entropies.push( m_max_entropy );
+                    m_max_positions.push( m_max_position );
+                    m_max_rotations.push( m_max_rotation );
+                    m_max_focus_points.push( m_max_focus_point );
+
+                    if( m_max_rotations.size() == 4 )
+                    {
+                        const auto q1 = m_max_rotations.front(); m_max_rotations.pop();
+                        const auto q2 = m_max_rotations.front(); m_max_rotations.pop();
+                        const auto q3 = m_max_rotations.front(); m_max_rotations.pop();
+                        const auto q4 = m_max_rotations.front(); m_max_rotations.pop();
+
+                        const auto p2 = m_max_positions.front(); m_max_positions.pop();
+                        const auto p3 = m_max_positions.front();
+
+                        const auto r2 = p2.length();
+                        const auto r3 = p3.length();
+
+                        const auto f2 = m_max_focus_points.front(); m_max_focus_points.pop();
+                        const auto f3 = m_max_focus_points.front();
+                        this->createPath( r2, r3, q1, q2, q3, q4, m_interval );
+                        this->createFocusPath( f2, f3, m_interval);
+
+                        m_data_queue.pop();
+                        m_path_entropies.push_back( m_max_entropies.front() );
+                        m_max_entropies.pop();
+                        m_path_positions.push_back( p2[0] );
+                        m_path_positions.push_back( p2[1] );
+                        m_path_positions.push_back( p2[2] );
+
+                        m_focus_path_positions.push_back( f2[0] );
+                        m_focus_path_positions.push_back( f2[1] );
+                        m_focus_path_positions.push_back( f2[2] );
+                        for ( size_t i = 0; i < m_interval - 1; i++ )
+                        {   //std::cout<<m_interval<<std::endl;
+                            const auto data_front = m_data_queue.front();
+                            const auto [ rad, rot ] = m_path.front();
+                            const auto focus = m_focus_path.front();
+                            const float radius = rad;
+                            const kvs::Quat rotation = rot;
+                            this->process( data_front, radius, rotation, focus );
+                            m_data_queue.pop();
+                            m_path.pop();
+                            m_focus_path.pop();
+
+                            m_path_entropies.push_back( m_max_entropy );
+                            m_path_positions.push_back( m_max_position[0] );
+                            m_path_positions.push_back( m_max_position[1] );
+                            m_path_positions.push_back( m_max_position[2] );
+                            m_focus_path_positions.push_back( m_max_focus_point[0] );
+                            m_focus_path_positions.push_back( m_max_focus_point[1] );
+                            m_focus_path_positions.push_back( m_max_focus_point[2] );
+                            
+                        }
+
+                        m_max_rotations.push( q2 );
+                        m_max_rotations.push( q3 );
+                        m_max_rotations.push( q4 );
+                    }
+                    m_data_queue.push( data );
+                }
+                else
+                {
+                    m_data_queue.push( data );
+                }
+            }
+        }
+    }
+    else
+    {
+        const auto q1 = m_max_rotations.front(); m_max_rotations.pop();
+        const auto q2 = m_max_rotations.front(); m_max_rotations.pop();
+        const auto q3 = m_max_rotations.front(); m_max_rotations.pop();
+        const auto q4 = q3;
+
+        const auto p2 = m_max_positions.front(); m_max_positions.pop();
+        const auto p3 = m_max_positions.front();
+
+        const auto r2 = p2.length();
+        const auto r3 = p3.length();
+
+        const auto f2 = m_max_focus_points.front(); m_max_focus_points.pop();
+        const auto f3 = m_max_focus_points.front();        
+
+        this->createPath( r2, r3, q1, q2, q3, q4, m_interval );
+        this->createFocusPath( f2, f3, m_interval);
+
+        m_data_queue.pop();
+        m_path_entropies.push_back( m_max_entropies.front() );
+        m_max_entropies.pop();
+        m_path_positions.push_back( p2[0] );
+        m_path_positions.push_back( p2[1] );
+        m_path_positions.push_back( p2[2] );
+
+        m_focus_path_positions.push_back( f2[0] );
+        m_focus_path_positions.push_back( f2[1] );
+        m_focus_path_positions.push_back( f2[2] );
+
+        for ( size_t i = 0; i < m_interval - 1; i++ )
+        {
+            const auto data_front = m_data_queue.front();
+            const auto [ rad, rot ] = m_path.front();
+            const auto focus = m_focus_path.front();
+            const float radius = rad;
+            const kvs::Quat rotation = rot;
+            this->process( data_front, radius, rotation, focus );
+            m_data_queue.pop();
+            m_path.pop();
+            m_focus_path.pop();
+
+            m_path_entropies.push_back( m_max_entropy );
+            m_path_positions.push_back( m_max_position[0] );
+            m_path_positions.push_back( m_max_position[1] );
+            m_path_positions.push_back( m_max_position[2] );
+            m_focus_path_positions.push_back( m_max_focus_point[0] );
+            m_focus_path_positions.push_back( m_max_focus_point[1] );
+            m_focus_path_positions.push_back( m_max_focus_point[2] );
+        }
+
+        while( m_data_queue.size() > 0 )
+        {
+            std::queue<std::tuple<float, kvs::Quat>> empty1;
+            m_path.swap( empty1 );            
+            std::queue<kvs::Vec3> empty;
+            m_focus_path.swap( empty );
+
+
+            for( size_t i = 0; i < m_interval - 1; i++ )
+            {
+                m_path.push( { r3, q3 } );
+                m_focus_path.push( f3 );
+            }
+
+            m_data_queue.pop();
+            m_path_entropies.push_back( m_max_entropies.front() );
+            m_max_entropies.pop();
+            m_path_positions.push_back( p3[0] );
+            m_path_positions.push_back( p3[1] );
+            m_path_positions.push_back( p3[2] );
+
+            m_focus_path_positions.push_back( f3[0] );
+            m_focus_path_positions.push_back( f3[1] );
+            m_focus_path_positions.push_back( f3[2] );
+
+            for ( size_t i = 0; i < m_interval - 1; i++ )
+            {
+                const auto data_front = m_data_queue.front();
+                const auto [ rad, rot ] = m_path.front();
+                const auto focus = m_focus_path.front();
+                const float radius = rad;
+                const kvs::Quat rotation = rot;
+                this->process( data_front, radius, rotation, focus );
+                m_data_queue.pop();
+                m_path.pop();
+                m_focus_path.pop();
+
+                m_path_entropies.push_back( m_max_entropy );
+                m_path_positions.push_back( m_max_position[0] );
+                m_path_positions.push_back( m_max_position[1] );
+                m_path_positions.push_back( m_max_position[2] );
+
+                m_focus_path_positions.push_back( m_max_focus_point[0] );
+                m_focus_path_positions.push_back( m_max_focus_point[1] );
+                m_focus_path_positions.push_back( m_max_focus_point[2] );
+            }
+        }
+    }
+}
+kvs::Vec3 CameraFocusController::Lerp( const kvs::Vec3& f2, const kvs::Vec3& f3, const float t)
+{
+    return (1 - t) * f2 + t* f3;
+}
+
+inline void CameraFocusController::createFocusPath(
+    const kvs::Vec3& f2,
+    const kvs::Vec3& f3,
+    const size_t point_interval )
+{
+    std::queue<kvs::Vec3> empty;
+    m_focus_path.swap( empty );
+
+    for( size_t i = 1; i < point_interval; i++ )
+    {
+        const float t = static_cast<float>( i ) / static_cast<float>( point_interval );
+        const auto f = Lerp( f2, f3, t );
+        m_focus_path.push( f );
+    }
+}
+}
