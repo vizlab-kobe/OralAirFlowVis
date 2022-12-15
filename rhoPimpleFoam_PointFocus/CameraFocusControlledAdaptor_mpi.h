@@ -36,6 +36,7 @@ private:
 
     //add
     kvs::Vec2i m_ndivs{ 20, 20 }; ///< number of divisions for frame buffer
+    size_t m_distance_position = 3;
 
 public:
     CameraFocusControlledAdaptor( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root ) {}
@@ -50,6 +51,7 @@ public:
     virtual void exec( const BaseClass::SimTime sim_time = {} );
     virtual bool dump();
     void setFinalTimeStep( const size_t step ) { m_final_time_step = step; }
+    void setDistancePosition( const size_t split ){ m_ distance_position = split }
 
     //add
     void setNumberOfDivisions( const kvs::Vec2i& ndivs ) { m_ndivs = ndivs; }

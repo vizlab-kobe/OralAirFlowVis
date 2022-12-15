@@ -142,6 +142,7 @@ inline void CameraFocusControlledAdaptor::execRendering()
         BaseClass::world().broadcast( at.data(), sizeof(float) * 3 );
         Controller::setMaxFocusPoint( at );
         const auto location = this->update_location( max_location, at );
+        
         const auto frame_buffer = BaseClass::readback( location );
         //   
 
