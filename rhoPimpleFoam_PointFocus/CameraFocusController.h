@@ -41,7 +41,7 @@ public:
     static Interpolator Squad();
 
 private:
-    size_t m_interval = 20; ///< time interval of entropy calculation
+    size_t m_interval =20; ///< time interval of entropy calculation
 
     bool m_cache_enabled = true; ///< flag for data caching
     bool m_final_step = false;

@@ -22,7 +22,6 @@
 #include <InSituVis/Lib/SphericalViewpoint.h>
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
-//#include "PointFocusAdaptor_mpi.h"
 #include <random>
 
 #include "CameraFocusControlledAdaptor_mpi.h"
@@ -39,8 +38,8 @@
 //#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
 
 // Viewpoint setting
-//#define IN_SITU_VIS__VIEWPOINT__SINGLE
-#define IN_SITU_VIS__VIEWPOINT__MULTIPLE
+#define IN_SITU_VIS__VIEWPOINT__SINGLE
+//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE
 
 //#define IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES
 
@@ -166,7 +165,7 @@ public:
 #elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
         //using Viewpoint = ::InSituVis::CubicViewpoint;
         using Viewpoint = ::InSituVis::SphericalViewpoint;
-        auto dims = kvs::Vec3ui( 1, 5, 10 );
+        auto dims = kvs::Vec3ui( 1, 9, 18 );
         auto dir = Viewpoint::Direction::Uni;
         //auto dir = Viewpoint::Direction::Omni;
         auto vp = Viewpoint();
@@ -182,7 +181,7 @@ public:
 
     void exec( const BaseClass::SimTime sim_time )
     {
-        if ( !BaseClass::screen().scene()->hasObject( "BoundaryMesh") )
+        /*if ( !BaseClass::screen().scene()->hasObject( "BoundaryMesh") )
         {
             const bool visible = BaseClass::world().rank() == BaseClass::world().root ();
             auto* object = new kvs::PolygonObject();
@@ -210,7 +209,7 @@ public:
             BaseClass::screen().registerObject( object, new kvs::Bounds() );
 //            object->setVisible( false );
 #endif
-        }
+        }*/
 
 #if defined( IN_SITU_VIS__UPDATE_MIN_MAX_VALUES )
         // Update min/max values of the volume data in each time step.
