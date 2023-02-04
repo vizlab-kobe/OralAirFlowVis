@@ -20,10 +20,10 @@
 #include <InSituVis/Lib/Viewpoint.h>
 #include <InSituVis/Lib/CubicViewpoint.h>
 #include <InSituVis/Lib/SphericalViewpoint.h>
+#include <InSituVis/Lib/RegularPolyhedronBasedSphericalViewpoint.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 #include <random>
 #include <InSituVis/Lib/Adaptor.h>
-//#include "EntropyControlledAdaptor_mpi.h"
 #include <InSituVis/Lib/CameraPathControlledAdaptor_mpi.h>
 
 // Adaptor setting
@@ -43,7 +43,6 @@
 
 
 #if defined( IN_SITU_VIS__ADAPTOR__ENTROPY_TIMESTEP_CONTROLL )
-//namespace { using Adaptor = local::mpi::EntropyControlledAdaptor; }
 namespace { using Adaptor = InSituVis::mpi::CameraPathControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
@@ -102,18 +101,47 @@ public:
         //this->setAnalysisInterval( 5 ); // l: analysis time interval
         //this->setAnalysisInterval( 100 ); // l: analysis time interval
 #if defined( IN_SITU_VIS__ADAPTOR__ENTROPY_TIMESTEP_CONTROLL )
-        //this->setEntropyFunction( BaseClass::DepthEntropy ); // default function
-        //this->setEntropyFunction( BaseClass::ColorEntropy ); // pre-defined function
-        //this->setEntropyFunction(                            // user specified function
-        //    [] ( const BaseClass::FrameBuffer& frame_buffer )
-        //    {
-        //        float entropy = 0.0f;
-        //        // calc entropy
-        //        return entropy;
-        //    } );
-//        this->setEntropyInterval( 30 ); // L: entropy calculation time interval
+        // Entropy evaluation intervals.
         this->setEntropyInterval( 30 ); // L: entropy calculation time interval
+        //this->setEntropyInterval( 50 ); // L: entropy calculation time interval
         //this->setEntropyInterval( 1 ); // L: entropy calculation time interval
+        
+        // Entropy evaluation function.
+        //this->setEntropyFunction( ::Adaptor::LightnessEntropy() ); // (a)
+        //this->setEntropyFunction( ::Adaptor::ColorEntropy() );     // (b)
+        //this->setEntropyFunction( ::Adaptor::DepthEntropy() );     // (c)
+        this->setEntropyFunction( ::Adaptor::MixedEntropy(         // (d)　default
+            ::Adaptor::LightnessEntropy(),
+            ::Adaptor::DepthEntropy(),
+            0.5f ) );
+        //this->setEntropyFunctionToLightness(); // (a)
+        //this->setEntropyFunctionToColor();     // (b)
+        //this->setEntropyFunctionToDepth();     // (c)
+        //this->setEntropyFunctionToMixed(       // (d)
+        //    ::Adaptor::LightnessEntropy(),
+        //    ::Adaptor::DepthEntropy(),
+        //    0.5f ) );
+        //this->setEntropyFunction( [] ( const ::Adaptor::FrameBuffer& buffer )
+        //{
+        //    float e;
+        //    return e;
+        //} );
+
+        // Interpolation function.
+        //this->setInterpolator( ::Adaptor::Slerp() ); // (a)
+        this->setInterpolator( ::Adaptor::Squad() ); // (b)　default
+        //this->setInterpolatorToSlerp();  // (a)
+        //this->setInterpolatorToSquad();  // (b)
+        //this->setInterpolator( [] (
+        //    const kvs::Quat& q1,
+        //    const kvs::Quat& q2,
+        //    const kvs::Quat& q3,
+        //    const kvs::Quat& q4,
+        //    float t )
+        //{
+        //    kvs::Quat q;
+        //    return q;
+        //} );
 #endif
 
         // Set visualization pipeline.
@@ -148,8 +176,9 @@ public:
         this->setViewpoint( vp );
 #elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
         //using Viewpoint = ::InSituVis::CubicViewpoint;
-        using Viewpoint = ::InSituVis::SphericalViewpoint;
-        auto dims = kvs::Vec3ui( 1, 25, 50 );
+        //using Viewpoint = ::InSituVis::SphericalViewpoint;
+        using Viewpoint = ::InSituVis::RegularPolyhedronBasedSphericalViewpoint;
+        auto dims = kvs::Vec3ui( 1, 20, 2 );
         auto dir = Viewpoint::Direction::Uni;
         //auto dir = Viewpoint::Direction::Omni;
         auto vp = Viewpoint();
@@ -416,7 +445,7 @@ inline InSituVis::Pipeline InSituVis::OrthoSlice()
         const auto min_value = volume.minValue();
         const auto max_value = volume.maxValue();
         //auto t = kvs::TransferFunction( kvs::ColorMap::CoolWarm() );
-        auto t = kvs::TransferFunction( kvs::ColorMap::BrewerSpectral() );
+        auto t = kvs::TransferFunction( kvs::ColorMap::BrewerRdBu() );
         t.setRange( min_value, max_value );
 
         // Create new slice objects.
@@ -487,6 +516,14 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
         auto* object2 = new kvs::Isosurface( &volume, i2, n, d, t );
         object2->setName( volume.name() + "Object2");
 
+        /*auto i3 = kvs::Math::Mix( min_value, max_value, 0.7 );
+        auto* object3 = new kvs::Isosurface( &volume, i3, n, d, t );
+        object3->setName( volume.name() + "Object3");
+
+        auto i4 = kvs::Math::Mix( min_value, max_value, 0.9 );
+        auto* object4 = new kvs::Isosurface( &volume, i4, n, d, t );
+        object4->setName( volume.name() + "Object4");
+*/
         // Register object and renderer to screen
         kvs::Light::SetModelTwoSide( true );
         if ( screen.scene()->hasObject( volume.name() + "Object0") )
@@ -495,6 +532,8 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
             screen.scene()->replaceObject( volume.name() + "Object0", object0 );
             screen.scene()->replaceObject( volume.name() + "Object1", object1 );
             screen.scene()->replaceObject( volume.name() + "Object2", object2 );
+            //screen.scene()->replaceObject( volume.name() + "Object3", object3 );
+            //screen.scene()->replaceObject( volume.name() + "Object4", object4 );
         }
         else
         {
@@ -502,12 +541,18 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
             auto* renderer0 = new kvs::glsl::PolygonRenderer();
             auto* renderer1 = new kvs::glsl::PolygonRenderer();
             auto* renderer2 = new kvs::glsl::PolygonRenderer();
+            //auto* renderer3 = new kvs::glsl::PolygonRenderer();
+            //auto* renderer4 = new kvs::glsl::PolygonRenderer();
             renderer0->setTwoSideLightingEnabled( true );
             renderer1->setTwoSideLightingEnabled( true );
             renderer2->setTwoSideLightingEnabled( true );
+            //renderer3->setTwoSideLightingEnabled( true );
+            //renderer4->setTwoSideLightingEnabled( true );
             screen.registerObject( object0, renderer0 );
             screen.registerObject( object1, renderer1 );
             screen.registerObject( object2, renderer2 );
+            //screen.registerObject( object3, renderer3 );
+            //screen.registerObject( object4, renderer4 );
             
             //Boundary mesh
             //mesh->setOpacity( 30 );
