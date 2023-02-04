@@ -22,7 +22,6 @@
 #include <InSituVis/Lib/SphericalViewpoint.h>
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
-//#include "PointFocusAdaptor_mpi.h"
 #include <random>
 
 #include "CameraFocusControlledAdaptor_mpi.h"
@@ -39,8 +38,8 @@
 //#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
 
 // Viewpoint setting
-//#define IN_SITU_VIS__VIEWPOINT__SINGLE
-#define IN_SITU_VIS__VIEWPOINT__MULTIPLE
+#define IN_SITU_VIS__VIEWPOINT__SINGLE
+//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE
 
 //#define IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES
 
@@ -143,21 +142,30 @@ public:
         // Set viewpoint(s)
 #if defined( IN_SITU_VIS__VIEWPOINT__SINGLE )
         using Viewpoint = ::InSituVis::Viewpoint;
-        auto dir = Viewpoint::Direction::Uni;
-        kvs::Vec3 p = { 0, 0, 12 } ;
-        kvs::Vec3 l = { 0, 0, 0 } ;
-        kvs::Vec3 u = { 0, 1, 0 };
+        //auto dir = Viewpoint::Direction::Uni;
+        //kvs::Vec3 p = { 1, 3, 12 } ;
+        //kvs::Vec3 l = { 0, 0, 0 } ;
+        //kvs::Vec3 u = { 0, 1, 0 };
         //auto location = Viewpoint::Location( {7, 5, 6} );
-        auto location = InSituVis::Viewpoint::Location( dir, p, u, l );
+        //auto location = InSituVis::Viewpoint::Location( dir, p, u, l );
         //auto location = Viewpoint::Location( {7, 5, 6} );
         //auto dir = Viewpoint::Direction::Omni;
         //auto location = Viewpoint::Location( dir, {-1, -0.4, 1} );
+        //auto vp = Viewpoint( location );
+        //this->setViewpoint( vp );
+        size_t i = 0;
+        auto dir = Viewpoint::Direction::Uni;
+        kvs::Vec3 p = { 0.0f, 0.0f, 12.0f } ;
+        kvs::Vec3 l = { 0.0f, 0.0f, 0.0f } ;
+        kvs::Vec3 u = { 0.0f, 1.0f, 0.0f };
+        kvs::Quat q = kvs::Quat::RotationQuaternion( kvs::Vec3( { 0.0f, 12.0f, 0.0f } ), p );
+        auto location = InSituVis::Viewpoint::Location( i, dir, p, u, q, l );
         auto vp = Viewpoint( location );
         this->setViewpoint( vp );
 #elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
         //using Viewpoint = ::InSituVis::CubicViewpoint;
         using Viewpoint = ::InSituVis::SphericalViewpoint;
-        auto dims = kvs::Vec3ui( 1, 5, 10 );
+        auto dims = kvs::Vec3ui( 1, 9, 18 );
         auto dir = Viewpoint::Direction::Uni;
         //auto dir = Viewpoint::Direction::Omni;
         auto vp = Viewpoint();
@@ -173,7 +181,7 @@ public:
 
     void exec( const BaseClass::SimTime sim_time )
     {
-        if ( !BaseClass::screen().scene()->hasObject( "BoundaryMesh") )
+        /*if ( !BaseClass::screen().scene()->hasObject( "BoundaryMesh") )
         {
             const bool visible = BaseClass::world().rank() == BaseClass::world().root ();
             auto* object = new kvs::PolygonObject();
@@ -201,7 +209,7 @@ public:
             BaseClass::screen().registerObject( object, new kvs::Bounds() );
 //            object->setVisible( false );
 #endif
-        }
+        }*/
 
 #if defined( IN_SITU_VIS__UPDATE_MIN_MAX_VALUES )
         // Update min/max values of the volume data in each time step.
