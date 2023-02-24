@@ -28,7 +28,7 @@ public:
     using Location = Viewpoint::Location;//add
 
 private:
-    int m_zoom_divid = 1;
+    int m_zoom_divid = 5;
     bool m_enable_output_image_depth = false;
     bool m_enable_output_evaluation_image = false; ///< if true, all of evaluation images will be output
     bool m_enable_output_evaluation_image_depth = false; ///< if true, all of evaluation depth images will be output
@@ -37,7 +37,7 @@ private:
     size_t m_final_time_step = 0;
 
     //add
-    kvs::Vec2i m_ndivs{ 40, 40 }; ///< number of divisions for frame buffer
+    kvs::Vec2i m_ndivs{ 20, 20 }; ///< number of divisions for frame buffer
     size_t m_distance_position = 3;
 
 public:
