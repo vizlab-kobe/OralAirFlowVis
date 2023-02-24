@@ -4,7 +4,6 @@
 #include <kvs/LabColor>
 
 
-
 namespace local
 {
 
