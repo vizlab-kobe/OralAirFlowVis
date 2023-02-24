@@ -176,9 +176,9 @@ public:
         this->setViewpoint( vp );
 #elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
         //using Viewpoint = ::InSituVis::CubicViewpoint;
-        //using Viewpoint = ::InSituVis::SphericalViewpoint;
-        using Viewpoint = ::InSituVis::RegularPolyhedronBasedSphericalViewpoint;
-        auto dims = kvs::Vec3ui( 1, 20, 2 );
+        using Viewpoint = ::InSituVis::SphericalViewpoint;
+        //using Viewpoint = ::InSituVis::RegularPolyhedronBasedSphericalViewpoint;
+        auto dims = kvs::Vec3ui( 1, 9, 18 );
         auto dir = Viewpoint::Direction::Uni;
         //auto dir = Viewpoint::Direction::Omni;
         auto vp = Viewpoint();
@@ -522,8 +522,8 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
 
         auto i4 = kvs::Math::Mix( min_value, max_value, 0.9 );
         auto* object4 = new kvs::Isosurface( &volume, i4, n, d, t );
-        object4->setName( volume.name() + "Object4");
-*/
+        object4->setName( volume.name() + "Object4");*/
+        
         // Register object and renderer to screen
         kvs::Light::SetModelTwoSide( true );
         if ( screen.scene()->hasObject( volume.name() + "Object0") )
