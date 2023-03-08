@@ -24,7 +24,7 @@
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 #include <random>
 
-#include "CameraFocusControlledAdaptor_mpi.h"
+//#include "CameraFocusControlledAdaptor_mpi.h"
 #include <InSituVis/Lib/CameraFocusControlledAdaptor_mpi.h>
 
 // Adaptor setting
