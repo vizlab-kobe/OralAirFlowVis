@@ -97,20 +97,21 @@ public:
         //this->setOutputSubImageEnabled( true, true, true ); // color, depth, alpha
 
         // Time intervals.
-        this->setAnalysisInterval( 10 ); // l: analysis time interval
-        //this->setAnalysisInterval( 5 ); // l: analysis time interval
+        //this->setAnalysisInterval( 10 ); // l: analysis time interval
+        this->setAnalysisInterval( 5 ); // l: analysis time interval
         //this->setAnalysisInterval( 100 ); // l: analysis time interval
 #if defined( IN_SITU_VIS__ADAPTOR__ENTROPY_TIMESTEP_CONTROLL )
         // Entropy evaluation intervals.
-        this->setEntropyInterval( 30 ); // L: entropy calculation time interval
+        //this->setEntropyInterval( 30 ); // L: entropy calculation time interval
         //this->setEntropyInterval( 50 ); // L: entropy calculation time interval
         //this->setEntropyInterval( 1 ); // L: entropy calculation time interval
-        
+        this->setEntropyInterval( 5 ); // L: entropy calculation time interval
+
         // Entropy evaluation function.
         //this->setEntropyFunction( ::Adaptor::LightnessEntropy() ); // (a)
         //this->setEntropyFunction( ::Adaptor::ColorEntropy() );     // (b)
         //this->setEntropyFunction( ::Adaptor::DepthEntropy() );     // (c)
-        this->setEntropyFunction( ::Adaptor::MixedEntropy(         // (d)　default
+        this->setEntropyFunction( ::Adaptor::MixedEntropy(         // (d) default
             ::Adaptor::LightnessEntropy(),
             ::Adaptor::DepthEntropy(),
             0.5f ) );
@@ -129,7 +130,7 @@ public:
 
         // Interpolation function.
         //this->setInterpolator( ::Adaptor::Slerp() ); // (a)
-        this->setInterpolator( ::Adaptor::Squad() ); // (b)　default
+        this->setInterpolator( ::Adaptor::Squad() ); // (b) default
         //this->setInterpolatorToSlerp();  // (a)
         //this->setInterpolatorToSquad();  // (b)
         //this->setInterpolator( [] (

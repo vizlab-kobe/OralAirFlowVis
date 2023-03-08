@@ -25,7 +25,7 @@
 #include <random>
 
 #include "CameraFocusControlledAdaptor_mpi.h"
-
+#include <InSituVis/Lib/CameraFocusControlledAdaptor_mpi.h>
 
 // Adaptor setting
 //#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
@@ -49,7 +49,8 @@ namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__POINT_FOCUS )
-namespace { using Adaptor = local::mpi::CameraFocusControlledAdaptor; }
+//namespace { using Adaptor = local::mpi::CameraFocusControlledAdaptor; }
+namespace { using Adaptor = InSituVis::mpi::CameraFocusControlledAdaptor; }
 #else
 namespace { using Adaptor = InSituVis::mpi::Adaptor; }
 #endif
@@ -104,6 +105,7 @@ public:
         this->setAnalysisInterval( 20 ); // l: analysis time interval
 //        this->setAnalysisInterval( 100 ); // l: analysis time interval
 #if defined( IN_SITU_VIS__ADAPTOR__POINT_FOCUS )
+        this->setEntropyInterval( 20 );
         //this->setEntropyFunction( BaseClass::DepthEntropy ); // default function
         //this->setEntropyFunction( BaseClass::ColorEntropy ); // pre-defined function
         //this->setEntropyFunction(                            // user specified function

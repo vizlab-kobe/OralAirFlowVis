@@ -433,6 +433,7 @@ inline void CameraFocusControlledAdaptor::process( const Data& data )
 
 //inline void CameraFocusControlledAdaptor::process( const Data& data, const float radius, const kvs::Quaternion& rotation )
 inline void CameraFocusControlledAdaptor::process( const Data& data, const float radius, const kvs::Quaternion& rotation , const kvs::Vec3& foc) //add
+//inline void CameraFocusControlledAdaptor::process( const Data& data, const float radius, const kvs::Vec3& focus, const kvs::Quaternion& rotation ) //add
 {
     const auto current_step = BaseClass::timeStep();
     {
