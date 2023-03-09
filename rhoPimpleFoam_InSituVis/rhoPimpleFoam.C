@@ -73,7 +73,6 @@ int main(int argc, char *argv[])
     Foam::messageStream::level = 0; // Disable Foam::Info
     const kvs::Indent indent(4); // indent for log stream
     local::InSituVis vis( MPI_COMM_WORLD );
-    vis.importBoundaryMesh( "./constant/triSurface/realistic-cfd3.stl" );
     if ( !vis.initialize() )
     {
         vis.log() << "ERROR: " << "Cannot initialize visualization process." << std::endl;
@@ -153,14 +152,14 @@ int main(int argc, char *argv[])
         // A (whole min/max values)
         //const auto min_value = 97928.796875;
         //const auto max_value = 106227.53906;
-//        const auto min_value = 0.99998 * 100000.0;
-//        const auto max_value = 1.02000 * 100000.0;
+        //const auto min_value = 0.99998 * 100000.0;
+        //const auto max_value = 1.02000 * 100000.0;
         // B
-//        const auto min_value = 9.94 * 10000.0;
-//        const auto max_value = 1.02 * 100000.0;
+        //const auto min_value = 9.94 * 10000.0;
+        //const auto max_value = 1.02 * 100000.0;
         // C
-//        const auto min_value = 0.999999 * 100000.0;
-//        const auto max_value = 1.000020 * 100000.0;
+        //const auto min_value = 0.999999 * 100000.0;
+        //const auto max_value = 1.000020 * 100000.0;
         const auto min_value = 0.999990 * 100000.0;
         const auto max_value = 1.000200 * 100000.0;
 #elif defined( IN_SITU_VIS__U ) // U: velocity
@@ -168,15 +167,15 @@ int main(int argc, char *argv[])
         // A (whole min/max values)
         const auto min_value = 0.0;
         const auto max_value = 71.645393372;
-//        const auto min_value = 0.0224;
-//        const auto max_value = 70.9;
+        //const auto min_value = 0.0224;
+        //const auto max_value = 70.9;
 #elif defined( IN_SITU_VIS__T ) // T: temperature
         auto& field = thermo.T();
         // A (whole min/max values)
         const auto min_value = 289.91583252;
         const auto max_value = 296.15917969;
-//        const auto min_value = 290.0;
-//        const auto max_value = 296.16;
+        //const auto min_value = 290.0;
+        //const auto max_value = 296.16;
 #endif
 
         // Convert OpenFOAM data to KVS data

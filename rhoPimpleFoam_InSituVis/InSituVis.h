@@ -24,23 +24,70 @@
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 #include <random>
 
+
+/*****************************************************************************/
+// In-situ visualization settings
+/*****************************************************************************/
+
 // Adaptor setting
-//#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL
+//----------------------------------------------------------------------------
+//#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP
 //#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 
 // Pipeline setting
-#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
-//#define IN_SITU_VIS__PIPELINE__ISOSURFACE
+//----------------------------------------------------------------------------
+//#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
+#define IN_SITU_VIS__PIPELINE__ISOSURFACE
 //#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
+//#define IN_SITU_VIS__PIPELINE__WHOLE_MIN_MAX_VALUES
 
 // Viewpoint setting
+//----------------------------------------------------------------------------
 #define IN_SITU_VIS__VIEWPOINT__SINGLE
-//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE
+//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_CUBIC
+//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
 
-//#define IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES
+// Parameters
+//----------------------------------------------------------------------------
+namespace Params
+{
+struct Output
+{
+static const auto Image = true;
+static const auto SubImage = false;
+static const auto SubImageDepth = false;
+static const auto SubImageAlpha = false;
+};
+
+const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
+const auto AnalysisInterval = 20; // l: analysis (visuaization) time interval
+
+const auto VisibleBoundingBox = true;
+const auto VisibleBoundaryMesh = false;
+
+// For IN_SITU_VIS__VIEWPOINT__*
+const auto ViewPos = kvs::Vec3{ 7, 5, 6 }; // viewpoint position
+const auto ViewDim = kvs::Vec3ui{ 3, 3, 3 }; // viewpoint dimension
+const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
+const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
+const auto ViewpointCubic = InSituVis::CubicViewpoint{ ViewDim, ViewDir };
+const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
+
+// For IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP
+const auto ValidationInterval = 4; // L: validation time interval
+const auto SamplingGranularity = 2; // R: granularity for the pattern A
+const auto DivergenceThreshold = 0.01; // diverging threshold for pattern classification
+
+// For IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
+const auto Repeats = 50; // number of repetitions for stochastic rendering
+const auto BoundaryMeshOpacity = 30; // opacity value [0-255] of boundary mesh
+}
+
+/*****************************************************************************/
 
 
-#if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
+// Adaptor definition
+#if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP )
 namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
@@ -78,29 +125,28 @@ public:
     InSituVis( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root )
     {
         // Common parameters.
-        //this->setImageSize( 1024, 1024 );
-        this->setImageSize( 512, 512 );
-        this->setOutputImageEnabled( true );
-        this->setOutputSubImageEnabled( false, false, false ); // color, depth, alpha
-        //this->setOutputSubImageEnabled( true, false, false ); // color, depth, alpha
-        //this->setOutputSubImageEnabled( true, true, true ); // color, depth, alpha
+        this->setImageSize( Params::ImageSize.x(), Params::ImageSize.y() );
+        this->setOutputImageEnabled( Params::Output::Image );
+        this->setOutputSubImageEnabled(
+            Params::Output::SubImage,
+            Params::Output::SubImageDepth,
+            Params::Output::SubImageAlpha );
+
+        // Import boundary mesh.
+        this->importBoundaryMesh( "./constant/triSurface/realistic-cfd3.stl" );
 
         // Time intervals.
-        this->setAnalysisInterval( 20 ); // l: analysis time interval
-//        this->setAnalysisInterval( 100 ); // l: analysis time interval
-#if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP_CONTROLL )
-        this->setValidationInterval( 4 ); // L: validation time interval
-        this->setSamplingGranularity( 2 ); // R: granularity for the pattern A
-        this->setDivergenceThreshold( 0.01 );
+        this->setAnalysisInterval( Params::AnalysisInterval );
+#if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP )
+        this->setValidationInterval( Params::ValidationInterval );
+        this->setSamplingGranularity( Params::SamplingGranularity );
+        this->setDivergenceThreshold( Params::DivergenceThreshold );
 #endif
 
         // Set visualization pipeline.
 #if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
-        //const size_t repeats = 10;
-        const size_t repeats = 50;
-        //const size_t repeats = 100;
-        this->setRepetitionLevel( repeats );
-        this->setPipeline( local::InSituVis::StochasticRendering( repeats ) );
+        this->setRepetitionLevel( Params::Repeats );
+        this->setPipeline( local::InSituVis::StochasticRendering( Params::Repeats ) );
 #elif defined( IN_SITU_VIS__PIPELINE__ORTHO_SLICE )
         this->setPipeline( local::InSituVis::OrthoSlice() );
 #elif defined( IN_SITU_VIS__PIPELINE__ISOSURFACE )
@@ -111,23 +157,11 @@ public:
 
         // Set viewpoint(s)
 #if defined( IN_SITU_VIS__VIEWPOINT__SINGLE )
-        using Viewpoint = ::InSituVis::Viewpoint;
-        //auto location = Viewpoint::Location( {0, 0, 12} ); // Default viewpoint
-        auto location = Viewpoint::Location( {7, 5, 6} );
-        //auto dir = Viewpoint::Direction::Omni;
-        //auto location = Viewpoint::Location( dir, {-1, -0.4, 1} );
-        auto vp = Viewpoint( location );
-        this->setViewpoint( vp );
-#elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE )
-        using Viewpoint = ::InSituVis::CubicViewpoint;
-        //using Viewpoint = ::InSituVis::SphericalViewpoint;
-        auto dims = kvs::Vec3ui( 3, 3, 3 );
-        auto dir = Viewpoint::Direction::Uni;
-        //auto dir = Viewpoint::Direction::Omni;
-        auto vp = Viewpoint();
-        vp.setDims( dims );
-        vp.create( dir );
-        this->setViewpoint( vp );
+        this->setViewpoint( Params::Viewpoint );
+#elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE_CUBIC )
+        this->setViewpoint( Params::ViewpointCubic );
+#elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL )
+        this->setViewpoint( Params::ViewpointSpherical );
 #endif
     }
 
@@ -155,7 +189,7 @@ public:
             BaseClass::screen().registerObject( o, r );
 
             // Boundary mesh
-            object->setOpacity( 30 );
+            object->setOpacity( Params::BoundaryMeshOpacity );
             auto* renderer = new kvs::StochasticPolygonRenderer();
             renderer->setTwoSideLightingEnabled( true );
             renderer->setEdgeFactor( 0.6f );
@@ -163,7 +197,7 @@ public:
 #else
             // Bounding box
             BaseClass::screen().registerObject( object, new kvs::Bounds() );
-//            object->setVisible( false );
+            object->setVisible( Params::VisibleBoundingBox );
 #endif
         }
 
@@ -190,7 +224,7 @@ public:
         }
 #endif
 
-#if defined( IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES )
+#if defined( IN_SITU_VIS__PIPELINE__WHOLE_MIN_MAX_VALUES )
         auto min_value = kvs::Value<kvs::Real64>::Max();
         auto max_value = kvs::Value<kvs::Real64>::Min();
         for ( auto& object : BaseClass::objects() )
@@ -311,7 +345,7 @@ public:
     {
         if ( !BaseClass::dump() ) return false;
 
-#if defined( IN_SITU_VIS__CALCULATE_WHOLE_MIN_MAX_VALUES )
+#if defined( IN_SITU_VIS__PIPELINE__WHOLE_MIN_MAX_VALUES )
         log() << "Whole Min: " << m_whole_min_value << std::endl;
         log() << "Whole Max: " << m_whole_max_value << std::endl;
 #endif
@@ -375,7 +409,7 @@ inline InSituVis::Pipeline InSituVis::OrthoSlice()
         Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
 
-        const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
+        auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
         if ( mesh )
         {
             const auto min_coord = mesh->minExternalCoord();
@@ -417,6 +451,14 @@ inline InSituVis::Pipeline InSituVis::OrthoSlice()
             renderer1->setTwoSideLightingEnabled( true );
             screen.registerObject( object0, renderer0 );
             screen.registerObject( object1, renderer1 );
+
+            // Boundary mesh
+            if ( Params::VisibleBoundaryMesh )
+            {
+                auto* renderer = new kvs::PolygonRenderer();
+                renderer->setTwoSideLightingEnabled( true );
+                screen.registerObject( mesh, renderer );
+            }
         }
     };
 }
@@ -482,10 +524,12 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
             screen.registerObject( object2, renderer2 );
 
             // Boundary mesh
-//            mesh->setOpacity( 30 );
-//            auto* renderer = new kvs::PolygonRenderer();
-//            renderer->setTwoSideLightingEnabled( true );
-//            screen.registerObject( mesh, renderer );
+            if ( Params::VisibleBoundaryMesh )
+            {
+                auto* renderer = new kvs::PolygonRenderer();
+                renderer->setTwoSideLightingEnabled( true );
+                screen.registerObject( mesh, renderer );
+            }
         }
     };
 }

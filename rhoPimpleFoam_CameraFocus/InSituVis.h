@@ -49,7 +49,6 @@ namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__POINT_FOCUS )
-//namespace { using Adaptor = local::mpi::CameraFocusControlledAdaptor; }
 namespace { using Adaptor = InSituVis::mpi::CameraFocusControlledAdaptor; }
 #else
 namespace { using Adaptor = InSituVis::mpi::Adaptor; }
