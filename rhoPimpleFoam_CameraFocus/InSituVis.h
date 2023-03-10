@@ -21,7 +21,7 @@
 #include <InSituVis/Lib/Viewpoint.h>
 #include <InSituVis/Lib/CubicViewpoint.h>
 #include <InSituVis/Lib/SphericalViewpoint.h>
-#include <InSituVis/Lib/RegularPolyhedronBasedSphericalViewpoint.h>
+#include <InSituVis/Lib/PolyhedralViewpoint.h>
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 #include <InSituVis/Lib/CameraFocusControlledAdaptor_mpi.h>
@@ -95,7 +95,7 @@ const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
 const auto ViewLoc = Loc( ViewRad, ViewDir );
 const auto Viewpoint = InSituVis::Viewpoint{ ViewLoc };
 const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
-const auto ViewpointPolyhedral = InSituVis::RegularPolyhedronBasedSphericalViewpoint{ ViewDim, ViewDir };
+const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
 // For IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL
 const auto EntropyInterval = 5; // L: entropy calculation time interval

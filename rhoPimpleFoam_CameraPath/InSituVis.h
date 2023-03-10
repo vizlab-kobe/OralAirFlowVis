@@ -21,7 +21,7 @@
 #include <InSituVis/Lib/Viewpoint.h>
 #include <InSituVis/Lib/CubicViewpoint.h>
 #include <InSituVis/Lib/SphericalViewpoint.h>
-#include <InSituVis/Lib/RegularPolyhedronBasedSphericalViewpoint.h>
+#include <InSituVis/Lib/PolyhedralViewpoint.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 #include <InSituVis/Lib/Adaptor.h>
 #include <InSituVis/Lib/CameraPathControlledAdaptor_mpi.h>
@@ -96,7 +96,7 @@ const auto ViewDim = kvs::Vec3ui{ 1, 9, 18 }; // viewpoint dimension
 const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
 const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
 const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
-const auto ViewpointPolyhedral = InSituVis::RegularPolyhedronBasedSphericalViewpoint{ ViewDim, ViewDir };
+const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
 // For IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL
 const auto EntropyInterval = 5; // L: entropy calculation time interval
@@ -445,7 +445,7 @@ inline InSituVis::Pipeline InSituVis::OrthoSlice()
         Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
 
-        const auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
+        auto* mesh = kvs::PolygonObject::DownCast( screen.scene()->object( "BoundaryMesh" ) );
         if ( mesh )
         {
             const auto min_coord = mesh->minExternalCoord();
