@@ -21,6 +21,7 @@
 #include <InSituVis/Lib/Viewpoint.h>
 #include <InSituVis/Lib/CubicViewpoint.h>
 #include <InSituVis/Lib/SphericalViewpoint.h>
+#include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 
 
@@ -30,6 +31,7 @@
 
 // Adaptor setting
 //----------------------------------------------------------------------------
+#define IN_SITU_VIS__ADAPTOR__TIMESTEP_CONTROLL
 //#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 
 // Pipeline setting
@@ -47,7 +49,9 @@
 
 // Adaptor definition
 //----------------------------------------------------------------------------
-#if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
+#if defined( IN_SITU_VIS__ADAPTOR__TIMESTEP_CONTROLL )
+namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
+#elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #else
 namespace { using Adaptor = InSituVis::mpi::Adaptor; }
@@ -78,6 +82,11 @@ const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
 const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
 const auto ViewpointCubic = InSituVis::CubicViewpoint{ ViewDim, ViewDir };
 const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
+
+// For IN_SITU_VIS__ADAPTOR__TIMESTEP_CONTROLL
+const auto ValidationInterval = 4; // L: validation time interval
+const auto SamplingGranularity = 2; // R: granularity for the pattern A
+const auto DivergenceThreshold = 0.01; // diverging threshold for pattern classification
 
 // For IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 const auto Repeats = 50; // number of repetitions for stochastic rendering
@@ -129,6 +138,11 @@ public:
 
         // Time intervals.
         this->setAnalysisInterval( Params::AnalysisInterval );
+#if defined( IN_SITU_VIS__ADAPTOR__TIMESTEP_CONTROLL )
+        this->setValidationInterval( Params::ValidationInterval );
+        this->setSamplingGranularity( Params::SamplingGranularity );
+        this->setDivergenceThreshold( Params::DivergenceThreshold );
+#endif
 
         // Set visualization pipeline.
 #if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
