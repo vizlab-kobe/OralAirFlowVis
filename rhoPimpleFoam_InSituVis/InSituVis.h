@@ -66,7 +66,7 @@ static const auto SubImageAlpha = false;
 };
 
 const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
-const auto AnalysisInterval = 20; // l: analysis (visuaization) time interval
+const auto AnalysisInterval = 5; // l: analysis (visuaization) time interval
 
 const auto VisibleBoundingBox = true;
 const auto VisibleBoundaryMesh = false;

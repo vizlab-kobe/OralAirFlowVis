@@ -210,30 +210,32 @@ public:
         if ( !BaseClass::screen().scene()->hasObject( "BoundaryMesh") )
         {
             const bool visible = BaseClass::world().rank() == BaseClass::world().root ();
-            auto* object = new kvs::PolygonObject();
-            object->shallowCopy( m_boundary_mesh );
-            object->setName( "BoundaryMesh" );
-            object->setVisible( visible );
+
+            // Boundary mesh
+            auto* mesh = new kvs::PolygonObject();
+            mesh->shallowCopy( m_boundary_mesh );
+            mesh->setName( "BoundaryMesh" );
+            mesh->setVisible( visible && Params::VisibleBoundaryMesh );
+
+            // Bounding box
+            kvs::Bounds bounds( kvs::RGBColor::Black(), 1.0f );
+            auto* bbox = bounds.outputLineObject( mesh );
+            bbox->setVisible( visible && Params::VisibleBoundingBox );
 
             // Register the bounding box at the root rank.
 #if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
-            // Bounding box
-            kvs::Bounds bounds( kvs::RGBColor::Black(), 1.0f );
-            auto* o = bounds.outputLineObject( object );
-            o->setVisible( object->isVisible() );
-            auto* r = new kvs::StochasticLineRenderer();
-            BaseClass::screen().registerObject( o, r );
+            mesh->setOpacity( 30 );
 
-            // Boundary mesh
-            object->setOpacity( 30 );
-            auto* renderer = new kvs::StochasticPolygonRenderer();
-            renderer->setTwoSideLightingEnabled( true );
-            renderer->setEdgeFactor( 0.6f );
-            BaseClass::screen().registerObject( object, renderer );
+            auto* bbox_rendererr = new kvs::StochasticLineRenderer();
+            auto* mesh_renderer = new kvs::StochasticPolygonRenderer();
+            mesh_renderer->setTwoSideLightingEnabled( true );
+            mesh_renderer->setEdgeFactor( 0.6f );
+
+            BaseClass::screen().registerObject( bbox, bbox_renderer );
+            BaseClass::screen().registerObject( mesh, mesh_renderer );
 #else
-            // Bounding box
-            BaseClass::screen().registerObject( object, new kvs::Bounds() );
-            object->setVisible( Params::VisibleBoundingBox );
+            BaseClass::screen().registerObject( bbox );
+            BaseClass::screen().registerObject( mesh );
 #endif
         }
 
@@ -560,12 +562,12 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
             screen.registerObject( object2, renderer2 );
 
             // Boundary mesh
-            if ( Params::VisibleBoundaryMesh )
-            {
-                auto* renderer = new kvs::PolygonRenderer();
-                renderer->setTwoSideLightingEnabled( true );
-                screen.registerObject( mesh, renderer );
-            }
+//            if ( Params::VisibleBoundaryMesh )
+//            {
+//                auto* renderer = new kvs::PolygonRenderer();
+//                renderer->setTwoSideLightingEnabled( true );
+//                screen.registerObject( mesh, renderer );
+//            }
         }
     };
 }
