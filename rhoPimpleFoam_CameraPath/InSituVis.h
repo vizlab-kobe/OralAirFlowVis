@@ -77,10 +77,11 @@ namespace Params
 {
 struct Output
 {
-static const auto Image = true;
-static const auto SubImage = false;
-static const auto SubImageDepth = false;
-static const auto SubImageAlpha = false;
+    static const auto Image = true;
+    static const auto SubImage = false;
+    static const auto SubImageDepth = false;
+    static const auto SubImageAlpha = false;
+    static const auto Entropies = true;
 };
 
 const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
