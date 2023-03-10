@@ -73,7 +73,6 @@ int main(int argc, char *argv[])
     Foam::messageStream::level = 0; // Disable Foam::Info
     const kvs::Indent indent(4); // indent for log stream
     local::InSituVis vis( MPI_COMM_WORLD );
-    vis.importBoundaryMesh( "./constant/triSurface/realistic-cfd3.stl" );
     if ( !vis.initialize() )
     {
         vis.log() << "ERROR: " << "Cannot initialize visualization process." << std::endl;

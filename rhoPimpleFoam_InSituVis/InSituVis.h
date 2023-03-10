@@ -1,4 +1,5 @@
 #pragma once
+#include <random>
 #include <kvs/OrthoSlice>
 #include <kvs/Isosurface>
 #include <kvs/PolygonObject>
@@ -22,7 +23,6 @@
 #include <InSituVis/Lib/SphericalViewpoint.h>
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
-#include <random>
 
 
 /*****************************************************************************/
@@ -31,7 +31,7 @@
 
 // Adaptor setting
 //----------------------------------------------------------------------------
-//#define IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP
+//#define IN_SITU_VIS__ADAPTOR__TIMESTEP_CONTROLL
 //#define IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 
 // Pipeline setting
@@ -46,6 +46,16 @@
 #define IN_SITU_VIS__VIEWPOINT__SINGLE
 //#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_CUBIC
 //#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
+
+// Adaptor definition
+//----------------------------------------------------------------------------
+#if defined( IN_SITU_VIS__ADAPTOR__TIMESTEP_CONTROLL )
+namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
+#elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
+namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
+#else
+namespace { using Adaptor = InSituVis::mpi::Adaptor; }
+#endif
 
 // Parameters
 //----------------------------------------------------------------------------
@@ -73,7 +83,7 @@ const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
 const auto ViewpointCubic = InSituVis::CubicViewpoint{ ViewDim, ViewDir };
 const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 
-// For IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP
+// For IN_SITU_VIS__ADAPTOR__TIMESTEP_CONTROLL
 const auto ValidationInterval = 4; // L: validation time interval
 const auto SamplingGranularity = 2; // R: granularity for the pattern A
 const auto DivergenceThreshold = 0.01; // diverging threshold for pattern classification
@@ -85,15 +95,6 @@ const auto BoundaryMeshOpacity = 30; // opacity value [0-255] of boundary mesh
 
 /*****************************************************************************/
 
-
-// Adaptor definition
-#if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP )
-namespace { using Adaptor = InSituVis::mpi::TimestepControlledAdaptor; }
-#elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
-namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
-#else
-namespace { using Adaptor = InSituVis::mpi::Adaptor; }
-#endif
 
 
 namespace local
@@ -137,7 +138,7 @@ public:
 
         // Time intervals.
         this->setAnalysisInterval( Params::AnalysisInterval );
-#if defined( IN_SITU_VIS__ADAPTOR__ADAPTIVE_TIMESTEP )
+#if defined( IN_SITU_VIS__ADAPTOR__TIMESTEP_CONTROLL )
         this->setValidationInterval( Params::ValidationInterval );
         this->setSamplingGranularity( Params::SamplingGranularity );
         this->setDivergenceThreshold( Params::DivergenceThreshold );
