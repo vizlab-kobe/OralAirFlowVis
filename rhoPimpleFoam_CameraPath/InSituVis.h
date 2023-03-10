@@ -59,10 +59,9 @@ namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 namespace { using Adaptor = InSituVis::mpi::Adaptor; }
 #endif
 
-
-// Rotation function
+// Viewpoint position
 //----------------------------------------------------------------------------
-const auto Rot = [] ( const float r )
+const auto Pos = [] ( const float r )
 {
     const auto tht = kvs::Math::pi / 4.0f;
     const auto phi = kvs::Math::pi / 4.0f;
@@ -92,7 +91,7 @@ const auto VisibleBoundaryMesh = false;
 
 // For IN_SITU_VIS__VIEWPOINT__*
 const auto ViewRad = 12.0f; // viewpoint radius
-const auto ViewPos = Rot( ViewRad ); // viewpoint position
+const auto ViewPos = Pos( ViewRad ); // viewpoint position
 const auto ViewDim = kvs::Vec3ui{ 1, 9, 18 }; // viewpoint dimension
 const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
 const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
