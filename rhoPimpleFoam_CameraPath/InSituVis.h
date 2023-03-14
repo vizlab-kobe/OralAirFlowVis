@@ -82,10 +82,13 @@ struct Output
     static const auto SubImageDepth = false;
     static const auto SubImageAlpha = false;
     static const auto Entropies = true;
+    static const auto EvalImage = false;
+    static const auto EvalImageDepth = false;
 };
 
 const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
-const auto AnalysisInterval = 5; // l: analysis (visuaization) time interval
+//const auto AnalysisInterval = 5; // l: analysis (visuaization) time interval
+const auto AnalysisInterval = 10; // l: analysis (visuaization) time interval
 
 const auto VisibleBoundingBox = true;
 const auto VisibleBoundaryMesh = false;
@@ -100,7 +103,8 @@ const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir 
 const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
 // For IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL
-const auto EntropyInterval = 5; // L: entropy calculation time interval
+//const auto EntropyInterval = 5; // L: entropy calculation time interval
+const auto EntropyInterval = 30; // L: entropy calculation time interval
 const auto MixedRatio = 0.5f; // mixed entropy ratio
 auto LightEnt = ::Adaptor::LightnessEntropy();
 auto DepthEnt = ::Adaptor::DepthEntropy();
@@ -169,6 +173,11 @@ public:
             Params::Output::SubImageDepth,
             Params::Output::SubImageAlpha );
 
+        this->setOutputEntropiesEnabled( Params::Output::Entropies );
+        this->setOutputEvaluationImageEnabled(
+            Params::Output::EvalImage,
+            Params::Output::EvalImageDepth );
+
         // Import boundary mesh.
         this->importBoundaryMesh( "./constant/triSurface/realistic-cfd3.stl" );
 
@@ -210,7 +219,7 @@ public:
     {
         if ( !BaseClass::screen().scene()->hasObject( "BoundaryMesh") )
         {
-            const bool visible = BaseClass::world().rank() == BaseClass::world().root ();
+            const bool visible = BaseClass::world().isRoot ();
 
             // Boundary mesh
             auto* mesh = new kvs::PolygonObject();
@@ -221,6 +230,7 @@ public:
             // Bounding box
             kvs::Bounds bounds( kvs::RGBColor::Black(), 1.0f );
             auto* bbox = bounds.outputLineObject( mesh );
+            bbox->setName( "BoundingBox" );
             bbox->setVisible( visible && Params::VisibleBoundingBox );
 
             // Register the bounding box at the root rank.
@@ -303,6 +313,53 @@ public:
 #endif
 
         BaseClass::exec( sim_time );
+    }
+
+    void execRendering()
+    {
+        if ( Params::VisibleBoundaryMesh && Params::VisibleBoundingBox )
+        {
+            BaseClass::execRendering();
+            return;
+        }
+
+        auto* mesh = kvs::PolygonObject::DownCast( BaseClass::screen().scene()->object( "BoundaryMesh" ) );
+        if ( mesh && Params::VisibleBoundaryMesh ) { mesh->setVisible( false ); }
+
+        auto* bbox = kvs::LineObject::DownCast( BaseClass::screen().scene()->object( "BoundingBox" ) );
+        if ( bbox && Params::VisibleBoundingBox ) { bbox->setVisible( false ); }
+
+        BaseClass::execRendering();
+
+        const bool visible = BaseClass::world().isRoot ();
+        if ( mesh ) { mesh->setVisible( visible && Params::VisibleBoundaryMesh ); }
+        if ( bbox ) { bbox->setVisible( visible && Params::VisibleBoundingBox ); }
+
+        if ( BaseClass::isEntropyStep() )
+        {
+            const auto index = BaseClass::maxIndex();
+            const auto location = BaseClass::viewpoint().at( index );
+            const auto frame_buffer = BaseClass::readback( location );
+            if ( BaseClass::world().isRoot() )
+            {
+                if ( BaseClass::isOutputImageEnabled() )
+                {
+                    BaseClass::outputColorImage( location, frame_buffer );
+                }
+            }
+        }
+        else
+        {
+            const auto location = BaseClass::erpLocation();
+            const auto frame_buffer = BaseClass::readback( location );
+            if ( BaseClass::world().isRoot() )
+            {
+                if ( BaseClass::isOutputImageEnabled() )
+                {
+                    BaseClass::outputColorImage( location, frame_buffer );
+                }
+            }
+        }
     }
 
     void importBoundaryMesh( const std::string& filename )
