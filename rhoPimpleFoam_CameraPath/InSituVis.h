@@ -245,8 +245,11 @@ public:
             BaseClass::screen().registerObject( bbox, bbox_renderer );
             BaseClass::screen().registerObject( mesh, mesh_renderer );
 #else
+            auto* mesh_renderer = new kvs::glsl::PolygonRenderer();
+            mesh_renderer->setTwoSideLightingEnabled( true );
+            mesh_renderer->setShadingModel( kvs::Shader::Lambert() );
             BaseClass::screen().registerObject( bbox );
-            BaseClass::screen().registerObject( mesh );
+            BaseClass::screen().registerObject( mesh, mesh_renderer );
 #endif
         }
 
@@ -317,7 +320,7 @@ public:
 
     void execRendering()
     {
-        if ( Params::VisibleBoundaryMesh && Params::VisibleBoundingBox )
+        if ( !Params::VisibleBoundaryMesh && !Params::VisibleBoundingBox )
         {
             BaseClass::execRendering();
             return;
