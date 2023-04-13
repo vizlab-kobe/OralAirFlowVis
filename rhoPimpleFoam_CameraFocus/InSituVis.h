@@ -61,13 +61,14 @@ namespace { using Adaptor = InSituVis::mpi::Adaptor; }
 
 // Viewpoint loc
 //----------------------------------------------------------------------------
-const auto Loc = [] ( const float r, InSituVis::Viewpoint::Direction d )
+const auto Pos = [] ( const float r )
 {
-    const auto p = kvs::Vec3{ 0.0f, 0.0f, r };
-    const auto l = kvs::Vec3{ 0.0f, 0.0f, 0.0f };
-    const auto u = kvs::Vec3{ 0.0f, 1.0f, 0.0f };
-    const auto q = kvs::Quat::RotationQuaternion( { 0.0f, r, 0.0f }, p );
-    return InSituVis::Viewpoint::Location{ 0, d, p, u, q, l };
+    const auto tht = kvs::Math::pi / 4.0f;
+    const auto phi = kvs::Math::pi / 4.0f;
+    const auto x = r * std::sin( tht ) * std::sin( phi );
+    const auto y = r * std::cos( tht );
+    const auto z = r * std::sin( tht ) * std::cos( phi );
+    return kvs::Vec3{ x, y, z };
 };
 
 // Parameters
@@ -83,22 +84,28 @@ static const auto SubImageAlpha = false;
 };
 
 const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
-const auto AnalysisInterval = 5; // l: analysis (visuaization) time interval
+//const auto AnalysisInterval = 5; // l: analysis (visuaization) time interval
+const auto AnalysisInterval = 10; // l: analysis (visuaization) time interval
 
 const auto VisibleBoundingBox = true;
 const auto VisibleBoundaryMesh = false;
 
 // For IN_SITU_VIS__VIEWPOINT__*
 const auto ViewRad = 12.0f; // viewpoint radius
-const auto ViewDim = kvs::Vec3ui{ 1, 9, 18 }; // viewpoint dimension
+const auto ViewPos = Pos( ViewRad ); // viewpoint position
+//const auto ViewDim = kvs::Vec3ui{ 1, 9, 18 }; // viewpoint dimension
+//const auto ViewDim = kvs::Vec3ui{ 1, 15, 30 }; // viewpoint dimension
+const auto ViewDim = kvs::Vec3ui{ 1, 25, 50 }; // viewpoint dimension
+//const auto ViewDim = kvs::Vec3ui{ 1, 35, 70 }; // viewpoint dimension
 const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
-const auto ViewLoc = Loc( ViewRad, ViewDir );
-const auto Viewpoint = InSituVis::Viewpoint{ ViewLoc };
+const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
 const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
-// For IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL
-const auto EntropyInterval = 5; // L: entropy calculation time interval
+// For IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROLL
+const auto ZoomLevel = 1;
+const auto FrameDivs = kvs::Vec2ui{ 20, 20 };
+const auto EntropyInterval = 30; // L: entropy calculation time interval
 const auto MixedRatio = 0.5f; // mixed entropy ratio
 auto LightEnt = ::Adaptor::LightnessEntropy();
 auto DepthEnt = ::Adaptor::DepthEntropy();
@@ -164,7 +171,9 @@ public:
 
         // Time intervals.
         this->setAnalysisInterval( Params::AnalysisInterval );
-#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL )
+#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROLL )
+        this->setZoomLevel( Params::ZoomLevel );
+        this->setFrameDivisions( Params::FrameDivs );
         this->setEntropyInterval( Params::EntropyInterval );
         this->setEntropyFunction( Params::EntropyFunction );
         this->setInterpolator( Params::Interpolator );
@@ -200,31 +209,37 @@ public:
     {
         if ( !BaseClass::screen().scene()->hasObject( "BoundaryMesh") )
         {
-            const bool visible = BaseClass::world().rank() == BaseClass::world().root ();
-            auto* object = new kvs::PolygonObject();
-            object->shallowCopy( m_boundary_mesh );
-            object->setName( "BoundaryMesh" );
-            object->setVisible( visible );
+            const bool visible = BaseClass::world().isRoot();
+
+            // Boundary mesh
+            auto* mesh = new kvs::PolygonObject();
+            mesh->shallowCopy( m_boundary_mesh );
+            mesh->setName( "BoundaryMesh" );
+            mesh->setVisible( visible && Params::VisibleBoundaryMesh );
+
+            // Bounding box
+            kvs::Bounds bounds( kvs::RGBColor::Black(), 1.0f );
+            auto* bbox = bounds.outputLineObject( mesh );
+            bbox->setName( "BoundingBox" );
+            bbox->setVisible( visible && Params::VisibleBoundingBox );
 
             // Register the bounding box at the root rank.
 #if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
-            // Bounding box
-            kvs::Bounds bounds( kvs::RGBColor::Black(), 1.0f );
-            auto* o = bounds.outputLineObject( object );
-            o->setVisible( object->isVisible() );
-            auto* r = new kvs::StochasticLineRenderer();
-            BaseClass::screen().registerObject( o, r );
-
-            // Boundary mesh
             object->setOpacity( 30 );
-            auto* renderer = new kvs::StochasticPolygonRenderer();
-            renderer->setTwoSideLightingEnabled( true );
-            renderer->setEdgeFactor( 0.6f );
-            BaseClass::screen().registerObject( object, renderer );
+
+            auto* bbox_rendererr = new kvs::StochasticLineRenderer();
+            auto* mesh_renderer = new kvs::StochasticPolygonRenderer();
+            mesh_renderer->setTwoSideLightingEnabled( true );
+            mesh_renderer->setEdgeFactor( 0.6f );
+
+            BaseClass::screen().registerObject( bbox, bbox_renderer );
+            BaseClass::screen().registerObject( mesh, mesh_renderer );
 #else
-            // Bounding box
-            BaseClass::screen().registerObject( object, new kvs::Bounds() );
-            object->setVisible( Params::VisibleBoundingBox );
+            auto* mesh_renderer = new kvs::glsl::PolygonRenderer();
+            mesh_renderer->setTwoSideLightingEnabled( true );
+            mesh_renderer->setShadingModel( kvs::Shader::Lambert() );
+            BaseClass::screen().registerObject( bbox );
+            BaseClass::screen().registerObject( mesh, mesh_renderer );
 #endif
         }
 
@@ -291,6 +306,75 @@ public:
 #endif
 
         BaseClass::exec( sim_time );
+    }
+
+    void execRendering()
+    {
+        if ( !Params::VisibleBoundaryMesh && !Params::VisibleBoundingBox )
+        {
+            BaseClass::execRendering();
+            return;
+        }
+
+        auto* mesh = kvs::PolygonObject::DownCast( BaseClass::screen().scene()->object( "BoundaryMesh" ) );
+        if ( mesh && Params::VisibleBoundaryMesh ) { mesh->setVisible( false ); }
+
+        auto* bbox = kvs::LineObject::DownCast( BaseClass::screen().scene()->object( "BoundingBox" ) );
+        if ( bbox && Params::VisibleBoundingBox ) { bbox->setVisible( false ); }
+
+        BaseClass::execRendering();
+
+        const bool visible = BaseClass::world().isRoot();
+        if ( mesh ) { mesh->setVisible( visible && Params::VisibleBoundaryMesh ); }
+        if ( bbox ) { bbox->setVisible( visible && Params::VisibleBoundingBox ); }
+
+        if ( BaseClass::isEntropyStep() )
+        {
+            const auto index = BaseClass::maxIndex();
+            const auto focus = BaseClass::maxFocusPoint();
+            auto location = BaseClass::focusedLocation( BaseClass::viewpoint().at( index ), focus );
+
+            const auto zoom_level = BaseClass::zoomLevel();
+            const auto p = location.position;
+            for ( size_t level = 0; level < zoom_level; level++ )
+            {
+                auto t = static_cast<float>( level ) / static_cast<float>( zoom_level );
+                location.position = ( 1 - t ) * p + t * focus;
+                auto frame_buffer = BaseClass::readback( location );
+
+                // Output the rendering images and the heatmap of entropies.
+                if ( BaseClass::world().isRoot() )
+                {
+                    if ( BaseClass::isOutputImageEnabled() )
+                    {
+                        BaseClass::outputColorImage( location, frame_buffer, level );
+                    }
+                }
+            }
+        }
+        else
+        {
+            const auto focus = BaseClass::maxFocusPoint();
+            auto location = BaseClass::erpLocation( focus );
+
+            const auto zoom_level = BaseClass::zoomLevel();
+            const auto p = location.position;
+            for ( size_t level = 0; level < zoom_level; level++ )
+            {
+                auto t = static_cast<float>( level ) / static_cast<float>( zoom_level );
+                location.position = ( 1 - t ) * p + t * focus;
+                auto frame_buffer = BaseClass::readback( location );
+
+                // Output the rendering images and the heatmap of entropies.
+                if ( BaseClass::world().isRoot() )
+                {
+                    if ( BaseClass::isOutputImageEnabled() )
+                    {
+                        BaseClass::outputColorImage( location, frame_buffer, level );
+                    }
+                }
+            }
+        }
     }
 
     void importBoundaryMesh( const std::string& filename )
@@ -551,12 +635,12 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
             screen.registerObject( object2, renderer2 );
 
             // Boundary mesh
-            if ( Params::VisibleBoundaryMesh )
-            {
-                auto* renderer = new kvs::PolygonRenderer();
-                renderer->setTwoSideLightingEnabled( true );
-                screen.registerObject( mesh, renderer );
-            }
+//            if ( Params::VisibleBoundaryMesh )
+//            {
+//                auto* renderer = new kvs::PolygonRenderer();
+//                renderer->setTwoSideLightingEnabled( true );
+//                screen.registerObject( mesh, renderer );
+//            }
         }
     };
 }

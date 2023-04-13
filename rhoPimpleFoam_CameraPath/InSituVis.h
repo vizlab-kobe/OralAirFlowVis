@@ -224,7 +224,7 @@ public:
     {
         if ( !BaseClass::screen().scene()->hasObject( "BoundaryMesh") )
         {
-            const bool visible = BaseClass::world().isRoot ();
+            const bool visible = BaseClass::world().isRoot();
 
             // Boundary mesh
             auto* mesh = new kvs::PolygonObject();
@@ -339,7 +339,7 @@ public:
 
         BaseClass::execRendering();
 
-        const bool visible = BaseClass::world().isRoot ();
+        const bool visible = BaseClass::world().isRoot();
         if ( mesh ) { mesh->setVisible( visible && Params::VisibleBoundaryMesh ); }
         if ( bbox ) { bbox->setVisible( visible && Params::VisibleBoundingBox ); }
 
