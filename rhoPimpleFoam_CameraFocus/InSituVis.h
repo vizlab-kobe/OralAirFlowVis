@@ -77,10 +77,12 @@ namespace Params
 {
 struct Output
 {
-static const auto Image = true;
-static const auto SubImage = false;
-static const auto SubImageDepth = false;
-static const auto SubImageAlpha = false;
+    static const auto Image = true;
+    static const auto SubImage = false;
+    static const auto SubImageDepth = false;
+    static const auto SubImageAlpha = false;
+    static const auto Entropies = true;
+    static const auto FrameEntropies = true;
 };
 
 const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
@@ -165,6 +167,9 @@ public:
             Params::Output::SubImage,
             Params::Output::SubImageDepth,
             Params::Output::SubImageAlpha );
+
+        this->setOutputEntropiesEnabled( Params::Output::Entropies );
+        this->setOutputFrameEntropiesEnabled( Params::Output::FrameEntropies );
 
         // Import boundary mesh.
         this->importBoundaryMesh( "./constant/triSurface/realistic-cfd3.stl" );
