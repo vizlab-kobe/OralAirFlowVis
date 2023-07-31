@@ -24,8 +24,8 @@
 #include <InSituVis/Lib/PolyhedralViewpoint.h>
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
+//#include <InSituVis/Lib/CFCA.h>
 #include <InSituVis/Lib/CameraFocusControlledAdaptor_mpi.h>
-
 
 /*****************************************************************************/
 // In-situ visualization settings
@@ -45,13 +45,14 @@
 
 // Viewpoint setting
 //----------------------------------------------------------------------------
-//#define IN_SITU_VIS__VIEWPOINT__SINGLE
-#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
+#define IN_SITU_VIS__VIEWPOINT__SINGLE
+//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
 //#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_POLYHEDRAL
 
 // Adaptor definition
 //----------------------------------------------------------------------------
 #if defined( IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROLL )
+//namespace { using Adaptor = InSituVis::mpi::CFCA; }
 namespace { using Adaptor = InSituVis::mpi::CameraFocusControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
@@ -94,20 +95,44 @@ const auto VisibleBoundaryMesh = false;
 
 // For IN_SITU_VIS__VIEWPOINT__*
 const auto ViewRad = 12.0f; // viewpoint radius
-const auto ViewPos = Pos( ViewRad ); // viewpoint position
+//const auto ViewPos = Pos( ViewRad ); // viewpoint position
+//const auto ViewPos = kvs::Vec3{6.0f,2.0f,4.0f}; // viewpoint position
+const auto ViewPos = kvs::Vec3{0.0f,0.0f,12.0f}; // viewpoint position
+
 //const auto ViewDim = kvs::Vec3ui{ 1, 9, 18 }; // viewpoint dimension
 //const auto ViewDim = kvs::Vec3ui{ 1, 15, 30 }; // viewpoint dimension
-const auto ViewDim = kvs::Vec3ui{ 1, 25, 50 }; // viewpoint dimension
+const auto ViewDim = kvs::Vec3ui{ 1, 5, 10 }; // viewpoint dimension
 //const auto ViewDim = kvs::Vec3ui{ 1, 35, 70 }; // viewpoint dimension
 const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
-const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
+//add
+kvs::Vec3 m_base_position = {0.0f,12.0f,0.0f};
+auto xyz_to_rtp = [&] ( const kvs::Vec3& xyz ) -> kvs::Vec3 {
+    const float x = xyz[0];
+    const float y = xyz[1];
+    const float z = xyz[2];
+    const float r = sqrt( x * x + y * y + z * z );
+    const float t = std::acos( y / r );
+    const float p = std::atan2( x, z );
+    return kvs::Vec3( r, t, p );
+};
+
+auto calc_rotation = [&] ( const kvs::Vec3& xyz ) -> kvs::Quaternion {
+    const auto rtp = xyz_to_rtp( xyz );
+    const float phi = rtp[2];
+    const auto axis = kvs::Vec3( { 0.0f, 1.0f, 0.0f } );
+    auto q_phi = kvs::Quaternion( axis, phi );
+    const auto q_theta = kvs::Quaternion::RotationQuaternion( m_base_position, xyz );
+    return q_theta * q_phi;
+};
+auto rotation = calc_rotation(ViewPos);
+const auto Viewpoint = InSituVis::Viewpoint{ { 000000, ViewDir, ViewPos , kvs::Vec3{0,1,0}, rotation} };
 const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
 // For IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROLL
-const auto ZoomLevel = 1;
-const auto FrameDivs = kvs::Vec2ui{ 20, 20 };
-const auto EntropyInterval = 30; // L: entropy calculation time interval
+const auto ZoomLevel = 5;
+const auto FrameDivs = kvs::Vec2ui{ 10, 10 };
+const auto EntropyInterval = 1; // L: entropy calculation time interval
 const auto MixedRatio = 0.5f; // mixed entropy ratio
 auto LightEnt = ::Adaptor::LightnessEntropy();
 auto DepthEnt = ::Adaptor::DepthEntropy();
@@ -182,6 +207,7 @@ public:
         this->setEntropyInterval( Params::EntropyInterval );
         this->setEntropyFunction( Params::EntropyFunction );
         this->setInterpolator( Params::Interpolator );
+        this->setOutputFrameEntropiesEnabled( Params::Output::FrameEntropies );
 #endif
 
         // Set visualization pipeline.
@@ -333,6 +359,49 @@ public:
         if ( mesh ) { mesh->setVisible( visible && Params::VisibleBoundaryMesh ); }
         if ( bbox ) { bbox->setVisible( visible && Params::VisibleBoundingBox ); }
 
+        /*if ( BaseClass::isEntropyStep() )
+        {
+            const auto index = BaseClass::maxIndex();
+            const auto focus = BaseClass::maxFocusPoint();
+            auto location = BaseClass::viewpoint().at( index );
+            //add
+            auto bestlocation = BaseClass::focusedLocation( location , focus );
+            bestlocation.position = BaseClass::bestLocationPosition();
+            bestlocation.rotation = BaseClass::maxRotation();
+            //auto location = BaseClass::bestLocation();
+
+            const auto level = BaseClass::bestZoomLevel();
+            auto frame_buffer = BaseClass::readback( bestlocation );
+            // Output the rendering images and the heatmap of entropies.
+            if ( BaseClass::world().isRoot() )
+            {
+                if ( BaseClass::isOutputImageEnabled() )
+                {
+                    BaseClass::outputColorImage( bestlocation, frame_buffer, level );
+                    //BaseClass::outputDepthImage( location, frame_buffer, level );
+                }
+            }
+        }
+        else
+        {
+            const auto focus = BaseClass::erpFocus();
+            auto location = BaseClass::erpLocation( focus );
+            //location.position = BaseClass::bestLocationPosition();
+            //auto bestlocation = BaseClass::erpLocation( focus );
+            //auto location = BaseClass::bestLocation();
+            const auto level = BaseClass::bestZoomLevel();
+            auto frame_buffer = BaseClass::readback( location );
+
+            // Output the rendering images and the heatmap of entropies.
+            if ( BaseClass::world().isRoot() )
+            {
+                if ( BaseClass::isOutputImageEnabled() )
+                {
+                    BaseClass::outputColorImage( location, frame_buffer, level );
+                    //BaseClass::outputDepthImage( location, frame_buffer, level );
+                }
+            }
+        }*/
         if ( BaseClass::isEntropyStep() )
         {
             const auto index = BaseClass::maxIndex();
