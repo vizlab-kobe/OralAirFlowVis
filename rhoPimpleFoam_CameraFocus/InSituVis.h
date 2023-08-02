@@ -24,8 +24,8 @@
 #include <InSituVis/Lib/PolyhedralViewpoint.h>
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
-//#include <InSituVis/Lib/CFCA.h>
-#include <InSituVis/Lib/CameraFocusControlledAdaptor_mpi.h>
+#include <InSituVis/Lib/CFCA.h>
+//#include <InSituVis/Lib/CameraFocusControlledAdaptor_mpi.h>
 
 /*****************************************************************************/
 // In-situ visualization settings
@@ -52,8 +52,8 @@
 // Adaptor definition
 //----------------------------------------------------------------------------
 #if defined( IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROLL )
-//namespace { using Adaptor = InSituVis::mpi::CFCA; }
-namespace { using Adaptor = InSituVis::mpi::CameraFocusControlledAdaptor; }
+namespace { using Adaptor = InSituVis::mpi::CFCA; }
+//namespace { using Adaptor = InSituVis::mpi::CameraFocusControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
 namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #else
@@ -96,8 +96,8 @@ const auto VisibleBoundaryMesh = false;
 // For IN_SITU_VIS__VIEWPOINT__*
 const auto ViewRad = 12.0f; // viewpoint radius
 //const auto ViewPos = Pos( ViewRad ); // viewpoint position
-//const auto ViewPos = kvs::Vec3{6.0f,2.0f,4.0f}; // viewpoint position
-const auto ViewPos = kvs::Vec3{0.0f,0.0f,12.0f}; // viewpoint position
+const auto ViewPos = kvs::Vec3{-6.0f,-2.0f,4.0f}; // viewpoint position
+//const auto ViewPos = kvs::Vec3{0.0f,0.0f,12.0f}; // viewpoint position
 
 //const auto ViewDim = kvs::Vec3ui{ 1, 9, 18 }; // viewpoint dimension
 //const auto ViewDim = kvs::Vec3ui{ 1, 15, 30 }; // viewpoint dimension
@@ -131,7 +131,7 @@ const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDi
 
 // For IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROLL
 const auto ZoomLevel = 5;
-const auto FrameDivs = kvs::Vec2ui{ 10, 10 };
+const auto FrameDivs = kvs::Vec2ui{ 10, 5 };
 const auto EntropyInterval = 1; // L: entropy calculation time interval
 const auto MixedRatio = 0.5f; // mixed entropy ratio
 auto LightEnt = ::Adaptor::LightnessEntropy();
@@ -359,7 +359,7 @@ public:
         if ( mesh ) { mesh->setVisible( visible && Params::VisibleBoundaryMesh ); }
         if ( bbox ) { bbox->setVisible( visible && Params::VisibleBoundingBox ); }
 
-        /*if ( BaseClass::isEntropyStep() )
+        if ( BaseClass::isEntropyStep() )
         {
             const auto index = BaseClass::maxIndex();
             const auto focus = BaseClass::maxFocusPoint();
@@ -401,8 +401,8 @@ public:
                     //BaseClass::outputDepthImage( location, frame_buffer, level );
                 }
             }
-        }*/
-        if ( BaseClass::isEntropyStep() )
+        }
+        /*if ( BaseClass::isEntropyStep() )
         {
             const auto index = BaseClass::maxIndex();
             const auto focus = BaseClass::maxFocusPoint();
@@ -448,7 +448,7 @@ public:
                     }
                 }
             }
-        }
+        }*/
     }
 
     void importBoundaryMesh( const std::string& filename )
