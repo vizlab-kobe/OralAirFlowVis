@@ -87,7 +87,7 @@ struct Output
 };
 const auto EstimateIncludingBox = false;
 const auto kotei = false;
-const auto VisibleBoundingBox = true;
+const auto VisibleBoundingBox = false;
 const auto VisibleBoundaryMesh = false;
 const auto AutoZoom = true;
 
@@ -95,8 +95,8 @@ const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
 const auto AnalysisInterval = 10; // l: analysis (visuaization) time interval
 
 // For IN_SITU_VIS__VIEWPOINT__*
-//const auto ViewPos = kvs::Vec3{-6.0f,-2.0f,4.0f}; // viewpoint position
-const auto ViewPos = kvs::Vec3{0.0f,0.0f,12.0f}; // viewpoint position
+const auto ViewPos = kvs::Vec3{-3.0f,-2.0f,4.0f}; // viewpoint position
+//const auto ViewPos = kvs::Vec3{0.0f,0.0f,12.0f}; // viewpoint position
 
 const auto ViewDim = kvs::Vec3ui{ 1, 5, 10 }; // viewpoint dimension
 //const auto ViewDim = kvs::Vec3ui{ 1, 35, 70 }; // viewpoint dimension
