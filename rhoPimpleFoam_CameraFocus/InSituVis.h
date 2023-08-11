@@ -95,7 +95,9 @@ const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
 const auto AnalysisInterval = 10; // l: analysis (visuaization) time interval
 
 // For IN_SITU_VIS__VIEWPOINT__*
-const auto ViewPos = kvs::Vec3{-3.0f,-2.0f,4.0f}; // viewpoint position
+const auto ViewPos = kvs::Vec3{-7.0f,0.0f,1.0f}; 
+//const auto ViewPos = kvs::Vec3{-8.0f,-5.0f,6.0f}; // viewpoint position
+//const auto ViewPos = kvs::Vec3{-6.0f,-3.0f,3.0f}; // viewpoint position
 //const auto ViewPos = kvs::Vec3{0.0f,0.0f,12.0f}; // viewpoint position
 
 const auto ViewDim = kvs::Vec3ui{ 1, 5, 10 }; // viewpoint dimension
