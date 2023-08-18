@@ -46,8 +46,8 @@
 // Viewpoint setting
 //----------------------------------------------------------------------------
 //#define IN_SITU_VIS__VIEWPOINT__SINGLE
-#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
-//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_POLYHEDRAL
+//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
+#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_POLYHEDRAL
 
 // Adaptor definition
 //----------------------------------------------------------------------------
@@ -94,21 +94,23 @@ const auto VisibleBoundingBox = true;
 const auto VisibleBoundaryMesh = false;
 
 // For IN_SITU_VIS__VIEWPOINT__*
-const auto ViewRad = 12.0f; // viewpoint radius
-const auto ViewPos = Pos( ViewRad ); // viewpoint position
+//const auto ViewRad = 12.0f; // viewpoint radius
+//const auto ViewPos = Pos( ViewRad ); // viewpoint position
 //const auto ViewDim = kvs::Vec3ui{ 1, 9, 18 }; // viewpoint dimension
 //const auto ViewDim = kvs::Vec3ui{ 1, 15, 30 }; // viewpoint dimension
-const auto ViewDim = kvs::Vec3ui{ 1, 25, 50 }; // viewpoint dimension
+const auto ViewDim = kvs::Vec3ui{ 1, 20, 2 }; // viewpoint dimension
 //const auto ViewDim = kvs::Vec3ui{ 1, 35, 70 }; // viewpoint dimension
 const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
-const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
-const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
+//const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
+//const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
 // For IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL
 //const auto EntropyInterval = 5; // L: entropy calculation time interval
-const auto EntropyInterval = 30; // L: entropy calculation time interval
-//const auto EntropyInterval = 2; // L: entropy calculation time interval
+//const auto EntropyInterval = 30; // L: entropy calculation time interval
+const auto EntropyInterval = 3; // L: entropy calculation time interval
+const auto EnableSlomo = false;
+const auto ViewpointInterval = 1.0f; // interpolated viewpoint interval
 const auto MixedRatio = 0.5f; // mixed entropy ratio
 //const auto MixedRatio = 0.75f; // mixed entropy ratio
 auto LightEnt = ::Adaptor::LightnessEntropy();
@@ -192,6 +194,8 @@ public:
         this->setEntropyInterval( Params::EntropyInterval );
         this->setEntropyFunction( Params::EntropyFunction );
         this->setInterpolator( Params::Interpolator );
+        this->setViewpointInterval( Params::ViewpointInterval );
+        this->setSlomoEnabled( Params::EnableSlomo );
 #endif
 
         // Set visualization pipeline.
@@ -343,7 +347,7 @@ public:
         if ( mesh ) { mesh->setVisible( visible && Params::VisibleBoundaryMesh ); }
         if ( bbox ) { bbox->setVisible( visible && Params::VisibleBoundingBox ); }
 
-        if ( BaseClass::isEntropyStep() )
+        if ( BaseClass::isEntropyStep() && !BaseClass::isErpStep() )
         {
             const auto index = BaseClass::maxIndex();
             const auto location = BaseClass::viewpoint().at( index );
