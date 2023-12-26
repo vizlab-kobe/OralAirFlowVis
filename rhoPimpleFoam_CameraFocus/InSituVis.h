@@ -24,7 +24,6 @@
 #include <InSituVis/Lib/PolyhedralViewpoint.h>
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
-#include <InSituVis/Lib/CFCA.h>
 #include <InSituVis/Lib/CameraFocusControlledAdaptor_mpi.h>
 
 /*****************************************************************************/
@@ -89,7 +88,7 @@ const auto EstimateIncludingBox = false;
 const auto VisibleBoundingBox = false;
 const auto VisibleBoundaryMesh = false;
 const auto AutoZoom = true;
-const auto ColorImage = true;
+const auto ColorImage = false;
 
 const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
 const auto AnalysisInterval = 10; // l: analysis (visuaization) time interval
@@ -191,7 +190,7 @@ public:
         this->setInterpolator( Params::Interpolator );
         this->setOutputFrameEntropiesEnabled( Params::Output::FrameEntropies );
         this->setAutoZoomingEnabled( Params::AutoZoom );
-        this->setOutpuColorImage( Params::ColorImage );
+        this->setOutputColorImage( Params::ColorImage );
 
 #endif
 
