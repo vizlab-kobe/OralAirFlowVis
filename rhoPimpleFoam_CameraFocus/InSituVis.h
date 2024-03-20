@@ -24,7 +24,6 @@
 #include <InSituVis/Lib/PolyhedralViewpoint.h>
 #include <InSituVis/Lib/TimestepControlledAdaptor.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
-#include <InSituVis/Lib/CFCA.h>
 #include <InSituVis/Lib/CameraFocusControlledAdaptor_mpi.h>
 
 /*****************************************************************************/
@@ -86,10 +85,10 @@ struct Output
     static const auto ZoomEntropies = true;
 };
 const auto EstimateIncludingBox = false;
-const auto kotei = false;
 const auto VisibleBoundingBox = false;
 const auto VisibleBoundaryMesh = false;
 const auto AutoZoom = true;
+const auto ColorImage = false;
 
 const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
 const auto AnalysisInterval = 10; // l: analysis (visuaization) time interval
@@ -191,6 +190,7 @@ public:
         this->setInterpolator( Params::Interpolator );
         this->setOutputFrameEntropiesEnabled( Params::Output::FrameEntropies );
         this->setAutoZoomingEnabled( Params::AutoZoom );
+        this->setOutputColorImage( Params::ColorImage );
 
 #endif
 
@@ -358,11 +358,6 @@ BaseClass::exec( sim_time );
                     // Update camera position.
                     auto t = static_cast<float>( level ) / static_cast<float>( zoom_level );
                     location.position = ( 1 - t ) * p + t * focus;
-                    if(Params::kotei == true)
-                    {
-                       location.look_at = {0,0,0};
-                       location.up_vector = {0,1,0};
-                    }
                     // Output the rendering images and the heatmap of entropies.
                         if ( Params::AutoZoom == false )
                         {
@@ -371,24 +366,25 @@ BaseClass::exec( sim_time );
                             { 
                                 if ( BaseClass::isOutputImageEnabled() )
                                 {
-                                    this->outputColorImage( location, frame_buffer, level );
+                                    if ( Params::ColorImage ) BaseClass::outputColorImage( location, frame_buffer, level );
+                                    else {BaseClass::outputDepthImage( location, frame_buffer, level );}
                                 }
                             }
                         }
                 }
                 if ( Params::AutoZoom )
                 {   
-                    location = BaseClass::viewpoint().at( index );
-                    auto bestlocation = BaseClass::focusedLocation( location , focus ); 
-                    bestlocation.position = BaseClass::estimatedZoomPosition();
-                    bestlocation.rotation = BaseClass::maxRotation();
+                    auto location = BaseClass::focusedLocation( BaseClass::viewpoint().at( index ) , focus ); 
+                    location.position = BaseClass::estimatedZoomPosition();
+                    location.rotation = BaseClass::maxRotation();
                     const auto level = BaseClass::estimatedZoomLevel();
-                    auto frame_buffer = BaseClass::readback( bestlocation );
+                    auto frame_buffer = BaseClass::readback( location );
                     if ( BaseClass::world().isRoot() )
                     {
                         if ( BaseClass::isOutputImageEnabled() )
                         {
-                            BaseClass::outputColorImage( bestlocation, frame_buffer, level );
+                            if ( Params::ColorImage ) BaseClass::outputColorImage( location, frame_buffer, level );
+                            else {BaseClass::outputDepthImage( location, frame_buffer, level );}
                         }
                     }
                 }
@@ -404,12 +400,7 @@ BaseClass::exec( sim_time );
                 {
                     auto t = static_cast<float>( level ) / static_cast<float>( zoom_level );
                     location.position = ( 1 - t ) * p + t * focus;
-                    //注視点を固定させたい時
-                    if(Params::kotei)
-                    {
-                        location.look_at = {0,0,0};
-                        location.up_vector = {0,1,0};
-                    }
+
                     if ( Params::AutoZoom == false )
                     {
                         auto frame_buffer = BaseClass::readback( location );
@@ -418,8 +409,8 @@ BaseClass::exec( sim_time );
                         {
                             if ( BaseClass::isOutputImageEnabled() )
                             {   
-                                BaseClass::outputColorImage( location, frame_buffer, level );
-                                //BaseClass::outputDepthImage( location, frame_buffer, level );
+                                if ( Params::ColorImage ) BaseClass::outputColorImage( location, frame_buffer, level );
+                                else {BaseClass::outputDepthImage( location, frame_buffer, level );}
                             }
                         }
                     }
@@ -427,19 +418,20 @@ BaseClass::exec( sim_time );
                 if(Params::AutoZoom)
                 {
                     const auto focus = BaseClass::erpFocus();
-                    auto bestlocation = BaseClass::erpLocation( focus );
+                    auto location = BaseClass::erpLocation( focus );
                     //location.position = BaseClass::bestLocationPosition();
                     //auto bestlocation = BaseClass::erpLocation( focus );
                     //auto location = BaseClass::bestLocation();
                     const auto level = BaseClass::estimatedZoomLevel();
-                    auto frame_buffer = BaseClass::readback( bestlocation );
+                    auto frame_buffer = BaseClass::readback( location );
 
                     // Output the rendering images and the heatmap of entropies.
                     if ( BaseClass::world().isRoot() )
                     {
                         if ( BaseClass::isOutputImageEnabled() )
                         {  
-                            BaseClass::outputColorImage( bestlocation, frame_buffer, level );
+                            if ( Params::ColorImage ) BaseClass::outputColorImage( location, frame_buffer, level );
+                            else {BaseClass::outputDepthImage( location, frame_buffer, level );}
                         }
                     }
                 }
@@ -453,65 +445,7 @@ BaseClass::exec( sim_time );
             BaseClass::execRendering();
         }
     }
-#elif defined( IN_SITU_VIS__ADAPTOR__CFCA )
-    void execRendering()
-    {
-        if ( !Params::VisibleBoundaryMesh && !Params::VisibleBoundingBox )
-        {
-            BaseClass::execRendering();
-            return;
-        }
 
-        auto* bbox = kvs::LineObject::DownCast( BaseClass::screen().scene()->object( "Bounds" ) );
-        if ( bbox && Params::VisibleBoundingBox ) { bbox->setVisible( false ); }
-
-        BaseClass::execRendering();
-
-        const bool visible = BaseClass::world().isRoot();
-        if ( bbox ) { bbox->setVisible( visible && Params::VisibleBoundingBox ); }
-
-        if ( BaseClass::isEntropyStep() )
-        {
-            const auto index = BaseClass::maxIndex();
-            const auto focus = BaseClass::maxFocusPoint();
-            auto location = BaseClass::viewpoint().at( index );
-            //add
-            auto bestlocation = BaseClass::focusedLocation( location , focus );
-            bestlocation.position = BaseClass::bestLocationPosition();
-            bestlocation.rotation = BaseClass::maxRotation();
-            //auto location = BaseClass::bestLocation();
-
-            const auto level = BaseClass::bestZoomLevel();
-            auto frame_buffer = BaseClass::readback( bestlocation );
-            // Output the rendering images and the heatmap of entropies.
-            if ( BaseClass::world().isRoot() )
-            {
-                if ( BaseClass::isOutputImageEnabled() )
-                {
-                    BaseClass::outputColorImage( bestlocation, frame_buffer, level );
-                }
-            }
-        }
-        else
-        {
-            const auto focus = BaseClass::erpFocus();
-            auto location = BaseClass::erpLocation( focus );
-            //location.position = BaseClass::bestLocationPosition();
-            //auto bestlocation = BaseClass::erpLocation( focus );
-            //auto location = BaseClass::bestLocation();
-            const auto level = BaseClass::bestZoomLevel();
-            auto frame_buffer = BaseClass::readback( location );
-
-            // Output the rendering images and the heatmap of entropies.
-            if ( BaseClass::world().isRoot() )
-            {
-                if ( BaseClass::isOutputImageEnabled() )
-                {
-                    BaseClass::outputColorImage( location, frame_buffer, level );
-                }
-            }
-        }
-    }
 #endif
 
     void importBoundaryMesh( const std::string& filename )
