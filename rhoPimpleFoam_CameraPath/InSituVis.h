@@ -45,8 +45,8 @@
 
 // Viewpoint setting
 //----------------------------------------------------------------------------
-//#define IN_SITU_VIS__VIEWPOINT__SINGLE
-//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
+// #define IN_SITU_VIS__VIEWPOINT__SINGLE
+// #define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
 #define IN_SITU_VIS__VIEWPOINT__MULTIPLE_POLYHEDRAL
 
 // Adaptor definition
@@ -58,18 +58,6 @@ namespace { using Adaptor = InSituVis::mpi::StochasticRenderingAdaptor; }
 #else
 namespace { using Adaptor = InSituVis::mpi::Adaptor; }
 #endif
-
-// Viewpoint position
-//----------------------------------------------------------------------------
-const auto Pos = [] ( const float r )
-{
-    const auto tht = kvs::Math::pi / 4.0f;
-    const auto phi = kvs::Math::pi / 4.0f;
-    const auto x = r * std::sin( tht ) * std::sin( phi );
-    const auto y = r * std::cos( tht );
-    const auto z = r * std::sin( tht ) * std::cos( phi );
-    return kvs::Vec3{ x, y, z };
-};
 
 // Parameters
 //----------------------------------------------------------------------------
@@ -94,37 +82,28 @@ const auto VisibleBoundingBox = true;
 const auto VisibleBoundaryMesh = false;
 
 // For IN_SITU_VIS__VIEWPOINT__*
-//const auto ViewRad = 12.0f; // viewpoint radius
-//const auto ViewPos = Pos( ViewRad ); // viewpoint position
-//const auto ViewDim = kvs::Vec3ui{ 1, 9, 18 }; // viewpoint dimension
-//const auto ViewDim = kvs::Vec3ui{ 1, 15, 30 }; // viewpoint dimension
+// const auto ViewDim = kvs::Vec3ui{ 1, 9, 16 }; // viewpoint dimension
 const auto ViewDim = kvs::Vec3ui{ 1, 20, 2 }; // viewpoint dimension
-//const auto ViewDim = kvs::Vec3ui{ 1, 35, 70 }; // viewpoint dimension
 const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
-//const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
-//const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
+// const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
 // For IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL
-//const auto EntropyInterval = 5; // L: entropy calculation time interval
-//const auto EntropyInterval = 30; // L: entropy calculation time interval
-const auto EntropyInterval = 3; // L: entropy calculation time interval
-const auto EnableSlomo = false;
-const auto ViewpointInterval = 1.0f; // interpolated viewpoint interval
+const auto CacheSize = 9;
+const auto Delta = 1.5f;
 const auto MixedRatio = 0.5f; // mixed entropy ratio
-//const auto MixedRatio = 0.75f; // mixed entropy ratio
 auto LightEnt = ::Adaptor::LightnessEntropy();
 auto DepthEnt = ::Adaptor::DepthEntropy();
 auto MixedEnt = ::Adaptor::MixedEntropy( LightEnt, DepthEnt, MixedRatio );
 
 // Entropy function
 auto EntropyFunction = MixedEnt;
-//auto EntropyFunction = LightEnt;
-//auto EntropyFunction = DepthEnt;
+// auto EntropyFunction = LightEnt;
+// auto EntropyFunction = DepthEnt;
 
-// Path interpolator
-auto Interpolator = ::Adaptor::Squad();
-//auto Interpolator = ::Adaptor::Slerp();
+// Path interpolation method
+// const auto InterpolationMethod = ::Adaptor::InterpolationMethod::SLERP;
+const auto InterpolationMethod = ::Adaptor::InterpolationMethod::SQUAD;
 
 // For IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 const auto Repeats = 50; // number of repetitions for stochastic rendering
@@ -191,11 +170,10 @@ public:
         // Time intervals, entropy function and path interpolatro.
         this->setAnalysisInterval( Params::AnalysisInterval );
 #if defined( IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL )
-        this->setEntropyInterval( Params::EntropyInterval );
+        this->setCacheSize( Params::CacheSize );
+        this->setDelta( Params::Delta );
         this->setEntropyFunction( Params::EntropyFunction );
-        this->setInterpolator( Params::Interpolator );
-        this->setViewpointInterval( Params::ViewpointInterval );
-        this->setSlomoEnabled( Params::EnableSlomo );
+        this->setInterpolator( Params::InterpolationMethod );
 #endif
 
         // Set visualization pipeline.
@@ -347,7 +325,7 @@ public:
         if ( mesh ) { mesh->setVisible( visible && Params::VisibleBoundaryMesh ); }
         if ( bbox ) { bbox->setVisible( visible && Params::VisibleBoundingBox ); }
 
-        if ( BaseClass::isEntropyStep() && !BaseClass::isErpStep() )
+        if ( BaseClass::isEntStep() && !BaseClass::isErpStep() )
         {
             const auto index = BaseClass::maxIndex();
             const auto location = BaseClass::viewpoint().at( index );
@@ -590,8 +568,10 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
         // Setup a transfer function.
         const auto min_value = volume.minValue();
         const auto max_value = volume.maxValue();
-        //auto t = kvs::TransferFunction( kvs::ColorMap::CoolWarm() );
+        //auto t = kvs::TransferFunction( kvs::ColorMap::BrewerSpectral() );
         auto t = kvs::TransferFunction( kvs::ColorMap::BrewerRdBu() );
+        // auto t = kvs::TransferFunction( kvs::ColorMap::BrewerPiYG() );
+        // auto t = kvs::TransferFunction( kvs::ColorMap::BrewerPuOr() );
         t.setRange( min_value, max_value );
 
         // Create new object
