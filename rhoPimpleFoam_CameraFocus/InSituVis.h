@@ -32,7 +32,7 @@
 
 // Adaptor setting
 //----------------------------------------------------------------------------
-#define IN_SITU_VIS__ADAPTOR__CAMERA_CONTROL
+#define IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROL
 //#define IN_SITU_VIS__ADAPTOR__CFCA
 
 // Pipeline setting
@@ -50,7 +50,7 @@
 
 // Adaptor definition
 //----------------------------------------------------------------------------
-#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_CONTROL )
+#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROL )
 namespace { using Adaptor = InSituVis::mpi::CameraFocusControlledAdaptor; }
 #elif defined( IN_SITU_VIS__ADAPTOR__CFCA )
 namespace { using Adaptor =  InSituVis::mpi::CFCA; }
@@ -81,38 +81,62 @@ struct Output
     static const auto SubImageDepth = false;
     static const auto SubImageAlpha = false;
     static const auto Entropies = true;
+    static const auto EvalImage = false;
+    static const auto EvalImageDepth = false;
     static const auto FrameEntropies = true;
     static const auto ZoomEntropies = true;
 };
 const auto EstimateIncludingBox = false;
-const auto VisibleBoundingBox = false;
+const auto VisibleBoundingBox = true;
 const auto VisibleBoundaryMesh = false;
 const auto AutoZoom = true;
-const auto ColorImage = false;
+const auto ColorImage = true;
+//const auto cdb = true;
 
 const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
 const auto AnalysisInterval = 10; // l: analysis (visuaization) time interval
 
 // For IN_SITU_VIS__VIEWPOINT__*
-const auto ViewPos = kvs::Vec3{-7.0f,0.0f,1.0f}; 
+//const auto ViewPos = kvs::Vec3{-7.0f,0.0f,1.0f}; 
 //const auto ViewPos = kvs::Vec3{-8.0f,-5.0f,6.0f}; // viewpoint position
 //const auto ViewPos = kvs::Vec3{-6.0f,-3.0f,3.0f}; // viewpoint position
-//const auto ViewPos = kvs::Vec3{0.0f,0.0f,12.0f}; // viewpoint position
+const auto ViewPos = kvs::Vec3{0.0f,0.0f,12.0f}; // viewpoint position
 
 const auto ViewDim = kvs::Vec3ui{ 1, 5, 10 }; // viewpoint dimension
 //const auto ViewDim = kvs::Vec3ui{ 1, 35, 70 }; // viewpoint dimension
 const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
 //add
+kvs::Vec3 m_base_position = {0.0f,12.0f,0.0f};
+auto xyz_to_rtp = [&] ( const kvs::Vec3& xyz ) -> kvs::Vec3 {
+    const float x = xyz[0];
+    const float y = xyz[1];
+    const float z = xyz[2];
+    const float r = sqrt( x * x + y * y + z * z );
+    const float t = std::acos( y / r );
+    const float p = std::atan2( x, z );
+    return kvs::Vec3( r, t, p );
+};
+auto calc_rotation = [&] ( const kvs::Vec3& xyz ) -> kvs::Quaternion {
+    const auto rtp = xyz_to_rtp( xyz );
+    const float phi = rtp[2];
+    const auto axis = kvs::Vec3( { 0.0f, 1.0f, 0.0f } );
+    auto q_phi = kvs::Quaternion( axis, phi );
+    const auto q_theta = kvs::Quaternion::RotationQuaternion( m_base_position, xyz );
+    return q_theta * q_phi;
+};
+auto rotation = calc_rotation(ViewPos);
 
-//const auto Viewpoint = InSituVis::Viewpoint{ { 000000, ViewDir, ViewPos , kvs::Vec3{0,1,0}, rotation} };
-const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
+
+const auto Viewpoint = InSituVis::Viewpoint{ { 000000, ViewDir, ViewPos , kvs::Vec3{0,1,0}, rotation} };
+//const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
 const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
-// For IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROLL
+// For IN_SITU_VIS__ADAPaTOR__CAMERA_FOCUS_CONTROL
+const auto CacheSize = 6;
+const auto Delta = 1.5f;
 const auto ZoomLevel = 5;
 const auto FrameDivs = kvs::Vec2ui{ 20, 20 };
-const auto EntropyInterval = 1; // L: entropy calculation time interval
 const auto MixedRatio = 0.5f; // mixed entropy ratio
 auto LightEnt = ::Adaptor::LightnessEntropy();
 auto DepthEnt = ::Adaptor::DepthEntropy();
@@ -124,8 +148,8 @@ auto EntropyFunction = MixedEnt;
 //auto EntropyFunction = DepthEnt;
 
 // Path interpolator
-auto Interpolator = ::Adaptor::Squad();
-//auto Interpolator = ::Adaptor::Slerp();
+// const auto InterpolationMethod = ::Adaptor::InterpolationMethod::SLERP;
+const auto InterpolationMethod = ::Adaptor::InterpolationMethod::SQUAD;
 
 // For IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 const auto Repeats = 50; // number of repetitions for stochastic rendering
@@ -154,6 +178,14 @@ public:
     static Pipeline ExternalFace( const kvs::mpi::Communicator& world );
     static Pipeline StochasticRendering( const size_t repeats );
 
+     void setFinalTimeStepIndex( size_t index )
+    {
+        m_final_time_step_index = index;
+#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROL )
+        this->setFinalTimeStep( m_final_time_step_index );
+#endif
+    }
+
 private:
     kvs::PolygonObject m_boundary_mesh; ///< boundary mesh
     kvs::mpi::StampTimer m_sim_timer{ BaseClass::world() }; ///< timer for sim. process
@@ -161,7 +193,7 @@ private:
     kvs::mpi::StampTimer m_vis_timer{ BaseClass::world() }; ///< timer for vis. process
     kvs::Real64 m_whole_min_value = 0.0; ///< min. value of whole time-varying volume data
     kvs::Real64 m_whole_max_value = 0.0; ///< max. value of whole time-varying volume data
-
+    size_t m_final_time_step_index = 0;
 public:
     InSituVis( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root )
     {
@@ -174,6 +206,9 @@ public:
             Params::Output::SubImageAlpha );
 
         this->setOutputEntropiesEnabled( Params::Output::Entropies );
+         this->setOutputEvaluationImageEnabled(
+            Params::Output::EvalImage,
+            Params::Output::EvalImageDepth );
         this->setOutputFrameEntropiesEnabled( Params::Output::FrameEntropies );
 
         // Import boundary mesh.
@@ -181,16 +216,17 @@ public:
 
         // Time intervals.
         this->setAnalysisInterval( Params::AnalysisInterval );
-
-#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_CONTROL )
-        this->setZoomLevel( Params::ZoomLevel );
+#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROL )
+        BaseClass::setCacheSize( Params::CacheSize );
+        BaseClass::setDelta( Params::Delta );
         this->setFrameDivisions( Params::FrameDivs );
-        this->setEntropyInterval( Params::EntropyInterval );
         this->setEntropyFunction( Params::EntropyFunction );
-        this->setInterpolator( Params::Interpolator );
+        BaseClass::setInterpolator( Params::InterpolationMethod );
+        this->setZoomLevel( Params::ZoomLevel );
         this->setOutputFrameEntropiesEnabled( Params::Output::FrameEntropies );
         this->setAutoZoomingEnabled( Params::AutoZoom );
-        this->setOutputColorImage( Params::ColorImage );
+        BaseClass::setOutputColorImage( Params::ColorImage );
+        //this->setOutputCdbEnabled( Params::cdb );
 
 #endif
 
@@ -342,11 +378,12 @@ BaseClass::exec( sim_time );
         {   
             
         BaseClass::execRendering();
+
         const bool visible = BaseClass::world().isRoot();
         if ( mesh ) { mesh->setVisible( visible && Params::VisibleBoundaryMesh ); }
         if ( bbox ) { bbox->setVisible( visible && Params::VisibleBoundingBox ); }
 
-            if ( BaseClass::isEntropyStep() )
+            if ( BaseClass::isEntStep() && !BaseClass::isErpStep() )
             {
                 const auto index = BaseClass::maxIndex();
                 const auto focus = BaseClass::maxFocusPoint();
