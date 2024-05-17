@@ -45,9 +45,9 @@
 
 // Viewpoint setting
 //----------------------------------------------------------------------------
-// #define IN_SITU_VIS__VIEWPOINT__SINGLE
-// #define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
-#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_POLYHEDRAL
+//#define IN_SITU_VIS__VIEWPOINT__SINGLE
+#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
+//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_POLYHEDRAL
 
 // Adaptor definition
 //----------------------------------------------------------------------------
@@ -83,13 +83,38 @@ const auto VisibleBoundaryMesh = false;
 
 // For IN_SITU_VIS__VIEWPOINT__*
 // const auto ViewDim = kvs::Vec3ui{ 1, 9, 16 }; // viewpoint dimension
-const auto ViewDim = kvs::Vec3ui{ 1, 20, 2 }; // viewpoint dimension
+const auto ViewDim = kvs::Vec3ui{ 1, 5, 10 }; // viewpoint dimension
 const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
-// const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
+const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
+ const auto ViewPos = kvs::Vec3{0.0f,0.0f,12.0f}; // viewpoint position
+// const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
 
+
+kvs::Vec3 m_base_position = {0.0f,12.0f,0.0f};
+auto xyz_to_rtp = [&] ( const kvs::Vec3& xyz ) -> kvs::Vec3 {
+    const float x = xyz[0];
+    const float y = xyz[1];
+    const float z = xyz[2];
+    const float r = sqrt( x * x + y * y + z * z );
+    const float t = std::acos( y / r );
+    const float p = std::atan2( x, z );
+    return kvs::Vec3( r, t, p );
+};
+auto calc_rotation = [&] ( const kvs::Vec3& xyz ) -> kvs::Quaternion {
+    const auto rtp = xyz_to_rtp( xyz );
+    const float phi = rtp[2];
+    const auto axis = kvs::Vec3( { 0.0f, 1.0f, 0.0f } );
+    auto q_phi = kvs::Quaternion( axis, phi );
+    const auto q_theta = kvs::Quaternion::RotationQuaternion( m_base_position, xyz );
+    return q_theta * q_phi;
+};
+auto rotation = calc_rotation(ViewPos);
+
+
+const auto Viewpoint = InSituVis::Viewpoint{ { 000000, ViewDir, ViewPos , kvs::Vec3{0,1,0}, rotation} };
 // For IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL
-const auto CacheSize = 9;
+const auto CacheSize = 6;
 const auto Delta = 1.5f;
 const auto MixedRatio = 0.5f; // mixed entropy ratio
 auto LightEnt = ::Adaptor::LightnessEntropy();
