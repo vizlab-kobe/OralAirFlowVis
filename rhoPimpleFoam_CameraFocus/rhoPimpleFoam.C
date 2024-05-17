@@ -84,6 +84,7 @@ int main(int argc, char *argv[])
     const auto start_time_index = runTime.startTimeIndex();
     const auto end_time = runTime.endTime().value();
     const auto end_time_index = static_cast<int>( end_time / runTime.deltaT().value() );
+    vis.setFinalTimeStepIndex( end_time_index );
     vis.log() << std::endl;
     vis.log() << "STARTING TIME LOOP" << std::endl;
     vis.log() << indent << "Start time and index: " << start_time << ", " << start_time_index << std::endl;
