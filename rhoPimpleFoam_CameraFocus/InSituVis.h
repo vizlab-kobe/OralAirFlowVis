@@ -30,11 +30,6 @@
 // In-situ visualization settings
 /*****************************************************************************/
 
-// Adaptor setting
-//----------------------------------------------------------------------------
-#define IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROL
-//#define IN_SITU_VIS__ADAPTOR__CFCA
-
 // Pipeline setting
 //----------------------------------------------------------------------------
 //#define IN_SITU_VIS__PIPELINE__ORTHO_SLICE
@@ -50,13 +45,7 @@
 
 // Adaptor definition
 //----------------------------------------------------------------------------
-#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROL )
 namespace { using Adaptor = InSituVis::mpi::CameraFocusControlledAdaptor; }
-#elif defined( IN_SITU_VIS__ADAPTOR__CFCA )
-namespace { using Adaptor =  InSituVis::mpi::CFCA; }
-#else
-namespace { using Adaptor = InSituVis::mpi::Adaptor; }
-#endif
 
 // Viewpoint loc
 //----------------------------------------------------------------------------
@@ -132,7 +121,6 @@ const auto Viewpoint = InSituVis::Viewpoint{ { 000000, ViewDir, ViewPos , kvs::V
 const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
-// For IN_SITU_VIS__ADAPaTOR__CAMERA_FOCUS_CONTROL
 const auto CacheSize = 6;
 const auto Delta = 1.5f;
 const auto ZoomLevel = 5;
@@ -181,9 +169,7 @@ public:
      void setFinalTimeStepIndex( size_t index )
     {
         m_final_time_step_index = index;
-#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROL )
         this->setFinalTimeStep( m_final_time_step_index );
-#endif
     }
 
 private:
@@ -216,7 +202,6 @@ public:
 
         // Time intervals.
         this->setAnalysisInterval( Params::AnalysisInterval );
-#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_FOCUS_CONTROL )
         BaseClass::setCacheSize( Params::CacheSize );
         BaseClass::setDelta( Params::Delta );
         this->setFrameDivisions( Params::FrameDivs );
@@ -226,9 +211,6 @@ public:
         this->setOutputFrameEntropiesEnabled( Params::Output::FrameEntropies );
         this->setAutoZoomingEnabled( Params::AutoZoom );
         BaseClass::setOutputColorImage( Params::ColorImage );
-        //this->setOutputCdbEnabled( Params::cdb );
-
-#endif
 
         // Set visualization pipeline.
 #if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
@@ -359,7 +341,6 @@ BaseClass::exec( sim_time );
 }
 
 
-#if defined( IN_SITU_VIS__ADAPTOR__CAMERA_CONTROL )
     void execRendering()
     {
         if ( !Params::VisibleBoundaryMesh && !Params::VisibleBoundingBox )
@@ -483,7 +464,6 @@ BaseClass::exec( sim_time );
         }
     }
 
-#endif
 
     void importBoundaryMesh( const std::string& filename )
     {
