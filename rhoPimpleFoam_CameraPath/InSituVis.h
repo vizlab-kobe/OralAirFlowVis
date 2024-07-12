@@ -114,8 +114,8 @@ auto rotation = calc_rotation(ViewPos);
 
 const auto Viewpoint = InSituVis::Viewpoint{ { 000000, ViewDir, ViewPos , kvs::Vec3{0,1,0}, rotation} };
 // For IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL
-const auto CacheSize = 6;
-const auto Delta = 1.5f;
+const auto entropyInterval = 30;
+const auto Delta = 2.0f;
 const auto MixedRatio = 0.5f; // mixed entropy ratio
 auto LightEnt = ::Adaptor::LightnessEntropy();
 auto DepthEnt = ::Adaptor::DepthEntropy();
@@ -195,10 +195,10 @@ public:
         // Time intervals, entropy function and path interpolatro.
         this->setAnalysisInterval( Params::AnalysisInterval );
 #if defined( IN_SITU_VIS__ADAPTOR__CAMERA_PATH_CONTROLL )
-        this->setCacheSize( Params::CacheSize );
+        this->setEntropyInterval( Params::entropyInterval );
         this->setDelta( Params::Delta );
         this->setEntropyFunction( Params::EntropyFunction );
-        this->setInterpolator( Params::InterpolationMethod );
+        this->setInterpolationMethod( Params::InterpolationMethod );
 #endif
 
         // Set visualization pipeline.
