@@ -46,8 +46,8 @@
 // Viewpoint setting
 //----------------------------------------------------------------------------
 // #define IN_SITU_VIS__VIEWPOINT__SINGLE
-// #define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
-#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_POLYHEDRAL //
+#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
+// #define IN_SITU_VIS__VIEWPOINT__MULTIPLE_POLYHEDRAL //
 
 // Adaptor definition
 //----------------------------------------------------------------------------
@@ -99,18 +99,41 @@ const auto ViewRad = 12.0f; // viewpoint radius -12 < 12
 const auto ViewPos = Pos( ViewRad ); // viewpoint position
 //const auto ViewDim = kvs::Vec3ui{ 1, 9, 18 }; // viewpoint dimension
 // const auto ViewDim = kvs::Vec3ui{ 1, 1, 1 }; // viewpoint dimension
-const auto ViewDim = kvs::Vec3ui{ 1, 20, 2 }; //
-// const auto ViewDim = kvs::Vec3ui{ 1, 5, 5 }; // viewpoint dimension (球面数,緯度方向,経度方向)　（球面数,n面体(20),細分化数(2)）
+// const auto ViewDim = kvs::Vec3ui{ 1, 20, 2 }; //
+const auto ViewDim = kvs::Vec3ui{ 1, 5, 10 }; // viewpoint dimension (球面数,緯度方向,経度方向)　（球面数,n面体(20),細分化数(2)）
 //const auto ViewDim = kvs::Vec3ui{ 1, 35, 70 }; // viewpoint dimension
 const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni(単方位カメラ) or Omni(全方位カメラ) 
 const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
 //------------
-// const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
-const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
+const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
+// const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
+
+// kvs::Vec3 m_base_position = {0.0f,12.0f,0.0f};
+// auto xyz_to_rtp = [&] ( const kvs::Vec3& xyz ) -> kvs::Vec3 {
+//     const float x = xyz[0];
+//     const float y = xyz[1];
+//     const float z = xyz[2];
+//     const float r = sqrt( x * x + y * y + z * z );
+//     const float t = std::acos( y / r );
+//     const float p = std::atan2( x, z );
+//     return kvs::Vec3( r, t, p );
+// };
+// auto calc_rotation = [&] ( const kvs::Vec3& xyz ) -> kvs::Quaternion {
+//     const auto rtp = xyz_to_rtp( xyz );
+//     const float phi = rtp[2];
+//     const auto axis = kvs::Vec3( { 0.0f, 1.0f, 0.0f } );
+//     auto q_phi = kvs::Quaternion( axis, phi );
+//     const auto q_theta = kvs::Quaternion::RotationQuaternion( m_base_position, xyz );
+//     return q_theta * q_phi;
+// };
+// auto rotation = calc_rotation(ViewPos);
+
+
 
 // For IN_SITU_VIS__ADAPTOR__CAMERA_TIME_STEP_CONTROLL
 //const auto EntropyInterval = 5; // L: entropy calculation time interval
 const auto EntropyInterval = 10; // L: entropy calculation time interval
+const auto Delta = 100.0f;
 //const auto EntropyInterval = 2; // L: entropy calculation time interval
 const auto MixedRatio = 0.5f; // mixed entropy ratio
 //const auto MixedRatio = 0.75f; // mixed entropy ratio
@@ -124,11 +147,11 @@ auto EntropyFunction = MixedEnt;
 //auto EntropyFunction = DepthEnt;
 
 // Path interpolator
-// auto Interpolator = ::Adaptor::Squad();
-auto Interpolator = ::Adaptor::Slerp();
+const auto InterpolationMethod = ::Adaptor::InterpolationMethod::SLERP;
+// const auto InterpolationMethod = ::Adaptor::InterpolationMethod::SQUAD;
 
 // For IN_SITU_VIS__ADAPTOR__TIMESTEP_CONTROLL
-const auto DivergenceThreshold = 0; // diverging threshold for pattern classification
+const auto DivergenceThreshold = 0.1; // diverging threshold for pattern classification
 
 // For IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 const auto Repeats = 50; // number of repetitions for stochastic rendering
@@ -162,9 +185,10 @@ public:
 #if defined( IN_SITU_VIS__ADAPTOR__CAMERA_PATH_TIME_STEP_CONTROLL )
         this->setFinalTimeStep( m_final_time_step_index );
         this->setDivergenceThreshold( Params::DivergenceThreshold );
+        this->setDelta( Params::Delta );
         this->setEntropyInterval( Params::EntropyInterval );
         this->setEntropyFunction( Params::EntropyFunction );
-        this->setInterpolator( Params::Interpolator );
+        this->setInterpolationMethod( Params::InterpolationMethod );
 #endif
     }
 
