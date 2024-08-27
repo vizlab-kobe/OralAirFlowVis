@@ -39,8 +39,8 @@
 
 // Viewpoint setting
 //----------------------------------------------------------------------------
-#define IN_SITU_VIS__VIEWPOINT__SINGLE
-//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
+//#define IN_SITU_VIS__VIEWPOINT__SINGLE
+#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
 //#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_POLYHEDRAL
 
 // Adaptor definition
@@ -53,9 +53,9 @@ const auto Pos = [] ( const float r )
 {
     const auto tht = kvs::Math::pi / 4.0f;
     const auto phi = kvs::Math::pi / 4.0f;
-    const auto x = r * std::sin( tht ) * std::sin( phi );
-    const auto y = r * std::cos( tht );
-    const auto z = r * std::sin( tht ) * std::cos( phi );
+    const float x = r * std::sin( tht ) * std::sin( phi );
+    const float y = r * std::cos( tht );
+    const float z = r * std::sin( tht ) * std::cos( phi );
     return kvs::Vec3{ x, y, z };
 };
 
@@ -84,6 +84,7 @@ const auto ColorImage = true;
 
 const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
 const auto AnalysisInterval = 10; // l: analysis (visuaization) time interval
+const auto entropyInterval = 5;
 
 // For IN_SITU_VIS__VIEWPOINT__*
 //const auto ViewPos = kvs::Vec3{-7.0f,0.0f,1.0f}; 
@@ -116,13 +117,13 @@ auto calc_rotation = [&] ( const kvs::Vec3& xyz ) -> kvs::Quaternion {
 auto rotation = calc_rotation(ViewPos);
 
 
-const auto Viewpoint = InSituVis::Viewpoint{ { 000000, ViewDir, ViewPos , kvs::Vec3{0,1,0}, rotation} };
+const auto Viewpoint = InSituVis::Viewpoint{ { 000000, ViewDir, ViewPos , kvs::Vec3{ 0.0f,1.0f,0.0f }, rotation} };
 //const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
 const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
-const auto CacheSize = 6;
-const auto Delta = 1.5f;
+// const auto CacheSize = 30 ;
+const auto Delta = 9.0f;
 const auto ZoomLevel = 5;
 const auto FrameDivs = kvs::Vec2ui{ 20, 20 };
 const auto MixedRatio = 0.5f; // mixed entropy ratio
@@ -136,7 +137,7 @@ auto EntropyFunction = MixedEnt;
 //auto EntropyFunction = DepthEnt;
 
 // Path interpolator
-// const auto InterpolationMethod = ::Adaptor::InterpolationMethod::SLERP;
+//const auto InterpolationMethod = ::Adaptor::InterpolationMethod::SLERP;
 const auto InterpolationMethod = ::Adaptor::InterpolationMethod::SQUAD;
 
 // For IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
@@ -202,11 +203,12 @@ public:
 
         // Time intervals.
         this->setAnalysisInterval( Params::AnalysisInterval );
-        BaseClass::setCacheSize( Params::CacheSize );
+        // BaseClass::setCacheSize( Params::CacheSize );
+        this->setEntropyInterval( Params::entropyInterval );
         BaseClass::setDelta( Params::Delta );
         this->setFrameDivisions( Params::FrameDivs );
         this->setEntropyFunction( Params::EntropyFunction );
-        BaseClass::setInterpolator( Params::InterpolationMethod );
+        BaseClass::setInterpolationMethod( Params::InterpolationMethod );
         this->setZoomLevel( Params::ZoomLevel );
         this->setOutputFrameEntropiesEnabled( Params::Output::FrameEntropies );
         this->setAutoZoomingEnabled( Params::AutoZoom );
@@ -392,9 +394,8 @@ BaseClass::exec( sim_time );
                 }
                 if ( Params::AutoZoom )
                 {   
-                    auto location = BaseClass::focusedLocation( BaseClass::viewpoint().at( index ) , focus ); 
+                    //auto location = BaseClass::focusedLocation( BaseClass::viewpoint().at( index ) , focus ); 
                     location.position = BaseClass::estimatedZoomPosition();
-                    location.rotation = BaseClass::maxRotation();
                     const auto level = BaseClass::estimatedZoomLevel();
                     auto frame_buffer = BaseClass::readback( location );
                     if ( BaseClass::world().isRoot() )
@@ -410,7 +411,7 @@ BaseClass::exec( sim_time );
             }
             else
             {
-                const auto focus = BaseClass::maxFocusPoint();
+                const auto focus = BaseClass::erpFocus();
                 auto location = BaseClass::erpLocation( focus );
                 const auto zoom_level = BaseClass::zoomLevel();
                 const auto p = location.position;
@@ -435,21 +436,21 @@ BaseClass::exec( sim_time );
                 }
                 if(Params::AutoZoom)
                 {
-                    const auto focus = BaseClass::erpFocus();
-                    auto location = BaseClass::erpLocation( focus );
+                    //const auto focus = BaseClass::erpFocus();
+                    auto locatio = BaseClass::erpLocation( focus );
                     //location.position = BaseClass::bestLocationPosition();
                     //auto bestlocation = BaseClass::erpLocation( focus );
                     //auto location = BaseClass::bestLocation();
-                    const auto level = BaseClass::estimatedZoomLevel();
-                    auto frame_buffer = BaseClass::readback( location );
+                    // auto location = BaseClass::estimatedZoomLocation();
+                    auto frame_buffer = BaseClass::readback( locatio );
 
                     // Output the rendering images and the heatmap of entropies.
                     if ( BaseClass::world().isRoot() )
                     {
                         if ( BaseClass::isOutputImageEnabled() )
                         {  
-                            if ( Params::ColorImage ) BaseClass::outputColorImage( location, frame_buffer, level );
-                            else {BaseClass::outputDepthImage( location, frame_buffer, level );}
+                            if ( Params::ColorImage ) BaseClass::outputColorImage( locatio, frame_buffer, 0 );
+                            else {BaseClass::outputDepthImage( locatio, frame_buffer, 0 );}
                         }
                     }
                 }
