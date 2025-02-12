@@ -77,7 +77,7 @@ struct Output
 };
 const auto EstimateIncludingBox = false;
 const auto VisibleBoundingBox = true;
-const auto VisibleBoundaryMesh = false;
+const auto VisibleBoundaryMesh = true;
 const auto AutoZoom =  true;
 const auto ColorImage = true;
 //const auto cdb = true;
@@ -85,13 +85,14 @@ const auto ColorImage = true;
 const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
 const auto AnalysisInterval = 10; // l: analysis (visuaization) time interval
 const auto entropyInterval = 20;
-const auto Candidates = 3;
-
+const auto Candidates = 5;
+const auto FrameDivs = kvs::Vec2ui{ 20, 20 };
 // For IN_SITU_VIS__VIEWPOINT__*
 //const auto ViewPos = kvs::Vec3{-7.0f,0.0f,1.0f}; 
 //const auto ViewPos = kvs::Vec3{-8.0f,-5.0f,6.0f}; // viewpoint position
 //const auto ViewPos = kvs::Vec3{-6.0f,-3.0f,3.0f}; // viewpoint position
-const auto ViewPos = kvs::Vec3{0.0f,0.0f,12.0f}; // viewpoint position
+// const auto ViewPos = kvs::Vec3{8.0f,-10.0f,-7.0f}; // viewpoint position
+const auto ViewPos = kvs::Vec3{4.0f,0.0f,10.0f}; // viewpoint position
 
 const auto ViewDim = kvs::Vec3ui{ 1, 5, 10 }; // viewpoint dimension
 //const auto ViewDim = kvs::Vec3ui{ 1, 35, 70 }; // viewpoint dimension
@@ -117,16 +118,13 @@ auto calc_rotation = [&] ( const kvs::Vec3& xyz ) -> kvs::Quaternion {
 };
 auto rotation = calc_rotation(ViewPos);
 
-
 const auto Viewpoint = InSituVis::Viewpoint{ { 000000, ViewDir, ViewPos , kvs::Vec3{ 0.0f,1.0f,0.0f }, rotation} };
 //const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
 const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 const auto ViewpointPolyhedral = InSituVis::PolyhedralViewpoint{ ViewDim, ViewDir };
 
 // const auto CacheSize = 30 ;
-const auto Delta = 9.0f;
 const auto ZoomLevel = 5;
-const auto FrameDivs = kvs::Vec2ui{ 20, 20 };
 const auto MixedRatio = 0.5f; // mixed entropy ratio
 auto LightEnt = ::Adaptor::LightnessEntropy();
 auto DepthEnt = ::Adaptor::DepthEntropy();
@@ -136,6 +134,12 @@ auto MixedEnt = ::Adaptor::MixedEntropy( LightEnt, DepthEnt, MixedRatio );
 auto EntropyFunction = MixedEnt;
 //auto EntropyFunction = LightEnt;
 //auto EntropyFunction = DepthEnt;
+
+//add
+
+// How to evaluate ROI
+// auto ROImethod = ::Adaptor::ROIMethod::max;
+auto ROImethod = ::Adaptor::ROIMethod::maximum; 
 
 // Path interpolator
 const auto InterpolationMethod = ::Adaptor::InterpolationMethod::SLERP;
@@ -206,7 +210,6 @@ public:
         this->setAnalysisInterval( Params::AnalysisInterval );
         // BaseClass::setCacheSize( Params::CacheSize );
         this->setEntropyInterval( Params::entropyInterval );
-        BaseClass::setDelta( Params::Delta );
         this->setFrameDivisions( Params::FrameDivs );
         this->setEntropyFunction( Params::EntropyFunction );
         BaseClass::setInterpolationMethod( Params::InterpolationMethod );
@@ -216,6 +219,7 @@ public:
         BaseClass::setOutputColorImage( Params::ColorImage );
 
         this->setCandidateNum( Params::Candidates );
+        this->setROIMethod( Params::ROImethod );
 
         // Set visualization pipeline.
 #if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
@@ -360,8 +364,6 @@ BaseClass::exec( sim_time );
         auto* bbox = kvs::LineObject::DownCast( BaseClass::screen().scene()->object( "BoundingBox" ) );
         if ( bbox && Params::VisibleBoundingBox ) { bbox->setVisible( false ); }
 
-      if (Params::EstimateIncludingBox == false)
-        {   
         BaseClass::execRendering();
         const bool visible = BaseClass::world().isRoot();
         if ( mesh ) { mesh->setVisible( visible && Params::VisibleBoundaryMesh ); }
@@ -456,14 +458,8 @@ BaseClass::exec( sim_time );
                     }
                 }
             }
-        }
-        else
-        {
-            const bool visible = BaseClass::world().isRoot();
-            if ( mesh ) { mesh->setVisible( visible && Params::VisibleBoundaryMesh ); }
-            if ( bbox ) { bbox->setVisible( visible && Params::VisibleBoundingBox ); }
-            BaseClass::execRendering();
-        }
+        if ( mesh ) { mesh->setVisible( false ); }
+        if ( bbox ) { bbox->setVisible( false ); }
     }
 
 
