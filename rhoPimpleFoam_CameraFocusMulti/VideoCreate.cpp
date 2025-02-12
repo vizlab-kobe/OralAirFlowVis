@@ -16,26 +16,24 @@ using namespace std;
 
 class Graph {
 public:
-    int V; // グラフの頂点数
-    vector<vector<pair<int, float>>> adj; // 隣接リスト (頂点, 重み)
+    int V; 
+    vector<vector<pair<int, float>>> adj; 
 
     Graph(int V) {
         this->V = V;
         adj.resize(V);
     }
 
-    // 辺を追加するメソッド（有向グラフ）
     void addEdge(int u, int v, float weight) {
         adj[u].push_back(make_pair(v, weight));
     }
 
-    // ダイクストラ法による最短経路計算
     void dijkstra(int start, vector<float>& dist, vector<int>& parent) {
         dist.assign(V, std::numeric_limits<float>::max());
         parent.assign(V, -1);
         dist[start] = 0.0f;
 
-        set<pair<float, int>> s; // (距離, 頂点)
+        set<pair<float, int>> s; // (distance, node)
         s.insert(make_pair(0.0f, start));
         int i=0;
         while (!s.empty()) {
@@ -75,7 +73,7 @@ std::vector<float> extractColumnFloat(const std::string& filename, size_t column
         std::cerr << "Failed to open file: " << filename << std::endl;
     }
 
-    std::vector<std::string> column_data; // 特定の列を格納する配列
+    std::vector<std::string> column_data; 
     std::string line;
     std::getline(file, line);
     while (std::getline(file, line)) {
@@ -83,11 +81,10 @@ std::vector<float> extractColumnFloat(const std::string& filename, size_t column
         std::string cell;
         size_t current_index = 0;
 
-        // CSVの各行をカンマで分割
         while (std::getline(ss, cell, ',')) {
             if (current_index == column_index) {
-                column_data.push_back(cell); // 指定列のデータを格納
-                break; // 特定の列に到達したら処理を終了
+                column_data.push_back(cell); 
+                break; 
             }
             ++current_index;
         }
@@ -109,7 +106,7 @@ std::vector<std::string> extractColumn(const std::string& filename, size_t colum
         std::cerr << "Failed to open file: " << filename << std::endl;
     }
 
-    std::vector<std::string> column_data; // 特定の列を格納する配列
+    std::vector<std::string> column_data; 
     std::string line;
     std::getline(file, line);
     while (std::getline(file, line)) {
@@ -117,11 +114,11 @@ std::vector<std::string> extractColumn(const std::string& filename, size_t colum
         std::string cell;
         size_t current_index = 0;
 
-        // CSVの各行をカンマで分割
+       
         while (std::getline(ss, cell, ',')) {
             if (current_index == column_index) {
-                column_data.push_back(cell); // 指定列のデータを格納
-                break; // 特定の列に到達したら処理を終了
+                column_data.push_back(cell); 
+                break; 
             }
             ++current_index;
         }
@@ -157,10 +154,10 @@ std::vector<std::string> listFiles(const fs::path& directory) {
 
 std::vector<int> getFilenameDetail(std::string filename){
     std::vector<int> file;
-    size_t firstUnderscore = filename.find('_'); // 最初のアンダースコアの位置
-    size_t secondUnderscore = filename.find('_', firstUnderscore + 1); // 次のアンダースコアの位置
-    size_t thirdUnderscore = filename.find('_', secondUnderscore + 1); // 次のアンダースコアの位置
-    size_t fourthUnderscore = filename.find('_', thirdUnderscore + 1); // 次のアンダースコアの位置
+    size_t firstUnderscore = filename.find('_'); 
+    size_t secondUnderscore = filename.find('_', firstUnderscore + 1); 
+    size_t thirdUnderscore = filename.find('_', secondUnderscore + 1);
+    size_t fourthUnderscore = filename.find('_', thirdUnderscore + 1);
     size_t periodScore = filename.find('.');
 
     int time = atoi((filename.substr(firstUnderscore + 1, secondUnderscore - firstUnderscore - 1)).c_str() );
@@ -176,10 +173,10 @@ std::vector<int> getFilenameDetail(std::string filename){
 
 bool getRouteImage(int time_from, int time_to, int candidate_num, int from, int to, std::string filename ){
     int routeNum = (from%candidate_num)*candidate_num + to%candidate_num;
-    size_t firstUnderscore = filename.find('_'); // 最初のアンダースコアの位置
-    size_t secondUnderscore = filename.find('_', firstUnderscore + 1); // 次のアンダースコアの位置
-    size_t thirdUnderscore = filename.find('_', secondUnderscore + 1); // 次のアンダースコアの位置
-    size_t fourthUnderscore = filename.find('_', thirdUnderscore + 1); // 次のアンダースコアの位置
+    size_t firstUnderscore = filename.find('_'); 
+    size_t secondUnderscore = filename.find('_', firstUnderscore + 1);
+    size_t thirdUnderscore = filename.find('_', secondUnderscore + 1);
+    size_t fourthUnderscore = filename.find('_', thirdUnderscore + 1); 
     size_t periodScore = filename.find('.'); 
     std::string routeImage;
 
@@ -195,16 +192,12 @@ bool getRouteImage(int time_from, int time_to, int candidate_num, int from, int 
 
 
 int main(int argc, char *argv[]) {
-using namespace std;
     chrono::system_clock::time_point start, end;
 
-    std::vector<std::string> fn; //ファイル名
-    std::vector<float> en;//エントロピーの値
+    std::vector<std::string> fn; 
+    std::vector<float> en;
     std::vector<float> pFP;
     std::vector<float> pCP;
-    float st_en[3];
-    float st_pFP[3];
-    float st_pCP[3];
     std::string cell;
     stack<int> path;
     auto candidate_num = atoi(argv[1]);
@@ -212,16 +205,12 @@ using namespace std;
     auto entropy_ratio = atof(argv[3]);
     auto focus_path_length_ratio = atof(argv[4]);
     auto camera_path_length_ratio = atof(argv[5]);
-    // std::ifstream file("/home/matsushima/Work/GitHub/OralAirFlowVis/realistic-s3/Output_1130/output_video_params.csv");
     std::ifstream file("../realistic-s3/Output/output_video_params.csv");
 
     if (!file.is_open()) {
         std::cerr << "ファイルを開けませんでした。" << std::endl;
         return 1;
     }
-
-    // fn = extractColumn("/home/matsushima/Work/GitHub/OralAirFlowVis/realistic-s3/Output/output_video_params.csv", 0);
-    // en = extractColumnFloat("/home/matsushima/Work/GitHub/OralAirFlowVis/realistic-s3/Output/output_video_params.csv", 1);
 
     fn = extractColumn("../realistic-s3/Output/output_video_params.csv", 0);
     en = extractColumnFloat("../realistic-s3/Output/output_video_params.csv", 1);
@@ -242,8 +231,8 @@ using namespace std;
             n++;
          }
     }
-    file.clear();         // 
-    file.seekg(0);        // 
+    file.clear();         
+    file.seekg(0);        
     for(size_t i=0;i<candidate_num+1;i++){
         std::getline(file, line);
     }
@@ -259,33 +248,12 @@ using namespace std;
             sum_pFP = sum_pFP + pFP[path + candidate_num*j + i%candidate_num];
             sum_pCP = sum_pCP + pCP[path + candidate_num*j + i%candidate_num];
         }
-        // auto av_en = sum_en/candidate_num;
-        // auto av_pFP = sum_pFP/candidate_num;
-        // auto av_pCP = sum_pCP/candidate_num;
-        // sum_en=0;
-        // sum_pFP=0;
-        // sum_pCP=0;
-        // for(size_t j=0; j<candidate_num;j++){
-        // sum_en = sum_en + (en[check*candidate_num+j] - av_en)*(en[check*candidate_num+j]);
-        // sum_pFP = sum_pFP + (pFP[path + candidate_num*j + i%candidate_num]-av_pFP)*(pFP[path + candidate_num*j + i%candidate_num]-av_pFP);
-        // sum_pCP = sum_pCP + (pCP[path + candidate_num*j + i%candidate_num]-av_pCP)*(pCP[path + candidate_num*j + i%candidate_num]-av_pCP);
-        // }
-        // for(size_t j=0; j<candidate_num;j++){
-        // st_en[j] = (en[check*candidate_num+j]-av_en)/sqrt(sum_en/candidate_num );
-        // st_pFP[j] = (pFP[path + candidate_num*j + i%candidate_num]-av_pFP) /sqrt(sum_pFP/candidate_num);
-        // st_pCP[j] = (pCP[path + candidate_num*j + i%candidate_num]-av_pCP)/sqrt(sum_pCP/candidate_num);
-        // }
+
         for(size_t j=0;j<candidate_num;j++){
             auto weight = entropy_ratio * en[check*candidate_num+j]/sum_en + focus_path_length_ratio * pFP[path + candidate_num*j + i%candidate_num]/sum_pFP + camera_path_length_ratio * pCP[path + candidate_num*j + i%candidate_num]/sum_pCP;
             g.addEdge(i,check*candidate_num+j,weight);
         }
-        //inititial method
-        // for(size_t j=0;j<candidate_num;j++){
-        //     auto weight = entropy_ratio * st_en[j] + focus_path_length_ratio * st_pFP[j] + camera_path_length_ratio * st_pCP[j];
-        //     std::cout<<weight<<std::endl;
-        //     g.addEdge(i,check*candidate_num+j,weight);
-        //     std::cout<<i<<"--"<<check*candidate_num+j<<std::endl;
-        // }
+
         if(i%candidate_num == candidate_num-1) check++;
    } 
 
@@ -318,9 +286,6 @@ using namespace std;
         cout << "ゴールノードへの経路が見つかりません。" << endl;
     }
     
-
-
-
     std::string newDirPath = "../realistic-s3/ex_Output/";
     std::string sourceImagePath;
 
@@ -328,10 +293,6 @@ using namespace std;
     fs::create_directory(newDirPath + "Output/");
     std::string destImagePath = newDirPath+"Output/";
     int fromImageindex = 0;
-    float camera_dist = 0.0;
-    float focus_dist = 0.0;
-    int candidateIndex_c = 0;
-    int candidateIndex_p = 0;
     int count = 0;
     start = chrono::system_clock::now();
     while (!path.empty()) {
@@ -341,7 +302,6 @@ using namespace std;
         auto fromTime = getFilenameDetail(fn[fromImageindex]);
         auto toTime = getFilenameDetail(fn[path.top()]);
 
-        candidateIndex_c = toTime[1];
         if (count>0){
             for (const auto& entry : fs::directory_iterator("../realistic-s3/Output")) {
                 if(getRouteImage(*fromTime.begin(),*toTime.begin(),candidate_num,fromImageindex,path.top(),entry.path().filename().c_str())){ 
@@ -349,15 +309,9 @@ using namespace std;
                     auto t ="../realistic-s3/ex_Output/Output/"+entry.path().filename().string();
                     fs::copy_file(f, t, fs::copy_option::overwrite_if_exists);
                 }
-            }
-            // std::cout<<candidateIndex<<std::endl;
-            
-            // std::cout<<pFP[candidate_num*candidate_num*(count-1) + candidate_num*candidateIndex_c + candidateIndex_p]<<std::endl;
+            }            
         }
-        candidateIndex_p = toTime[1];
-        // std::cout<<candidateIndex<<std::endl;
         fromImageindex = path.top();
-        // std::cout << fn[path.top()] << std::endl; // 値を取得
         path.pop();
         count = count+1;
     }
