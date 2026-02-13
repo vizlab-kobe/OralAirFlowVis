@@ -21,6 +21,7 @@
 #include <InSituVis/Lib/Viewpoint.h>
 #include <InSituVis/Lib/CubicViewpoint.h>
 #include <InSituVis/Lib/SphericalViewpoint.h>
+#include <InSituVis/Lib/PolyhedralViewpoint.h>
 #include <InSituVis/Lib/StochasticRenderingAdaptor.h>
 
 
@@ -39,12 +40,6 @@
 //#define IN_SITU_VIS__PIPELINE__EXTERNAL_FACE
 //#define IN_SITU_VIS__PIPELINE__WHOLE_MIN_MAX_VALUES
 
-// Viewpoint setting
-//----------------------------------------------------------------------------
-#define IN_SITU_VIS__VIEWPOINT__SINGLE
-//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_CUBIC
-//#define IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL
-
 // Adaptor definition
 //----------------------------------------------------------------------------
 #if defined( IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING )
@@ -59,34 +54,47 @@ namespace Params
 {
 struct Output
 {
-static const auto Image = true;
-static const auto SubImage = false;
-static const auto SubImageDepth = false;
-static const auto SubImageAlpha = false;
+    static const auto Image = true;
+    static const auto SubImage = false;
+    static const auto SubImageDepth = false;
+    static const auto SubImageAlpha = false;
 };
 
-const auto ImageSize = kvs::Vec2ui{ 512, 512 }; // width x height
-const auto AnalysisInterval = 5; // l: analysis (visuaization) time interval
+const auto ImageSize = kvs::Vec2ui{ 1024, 1024 }; // width x height
+const auto AnalysisInterval = 100; // l: analysis (visuaization) time interval
 
-const auto VisibleBoundingBox = true;
+const auto VisibleBoundingBox = false;
 const auto VisibleBoundaryMesh = false;
-
-// For IN_SITU_VIS__VIEWPOINT__*
-const auto ViewPos = kvs::Vec3{ 7, 5, 6 }; // viewpoint position
-const auto ViewDim = kvs::Vec3ui{ 3, 3, 3 }; // viewpoint dimension
-const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
-const auto Viewpoint = InSituVis::Viewpoint{ { ViewDir, ViewPos } };
-const auto ViewpointCubic = InSituVis::CubicViewpoint{ ViewDim, ViewDir };
-const auto ViewpointSpherical = InSituVis::SphericalViewpoint{ ViewDim, ViewDir };
 
 // For IN_SITU_VIS__ADAPTOR__STOCHASTIC_RENDERING
 const auto Repeats = 50; // number of repetitions for stochastic rendering
 const auto BoundaryMeshOpacity = 30; // opacity value [0-255] of boundary mesh
-}
+
+// Viewpoint settings (Integrated from sample code)
+//----------------------------------------------------------------------------
+const auto ViewDir = InSituVis::Viewpoint::Direction::Uni; // Uni or Omni
+
+// 座標系はUnstructured gridのデータスケールに合わせて調整が必要な場合がありますが
+// サンプルコードの値をそのまま移植しています。
+const auto m_min_coord = kvs::Vec3{ -9.0f, -9.0f, -9.0f };
+const auto m_max_coord = kvs::Vec3{  9.0f,  9.0f,  9.0f };
+const auto look_at_coord = kvs::Vec3{ 0, 0, 0};
+
+const auto ViewDim1 = kvs::Vec3ui{ 1, 8, 1 }; // viewpoint dimension
+const auto ViewDim2 = kvs::Vec3ui{ 1, 8, 2 }; // viewpoint dimension
+const auto ViewDim3 = kvs::Vec3ui{ 1, 4, 2 }; // viewpoint dimension
+const auto ViewDim4 = kvs::Vec3ui{ 1, 4, 3 }; // viewpoint dimension
+const auto ViewDim5 = kvs::Vec3ui{ 1, 20, 1 }; // viewpoint dimension
+
+const auto Viewpoint1 = InSituVis::PolyhedralViewpoint{ ViewDim1, m_min_coord, m_max_coord, look_at_coord, ViewDir };
+const auto Viewpoint2 = InSituVis::PolyhedralViewpoint{ ViewDim2, m_min_coord, m_max_coord, look_at_coord, ViewDir };
+const auto Viewpoint3 = InSituVis::PolyhedralViewpoint{ ViewDim3, m_min_coord, m_max_coord, look_at_coord, ViewDir };
+const auto Viewpoint4 = InSituVis::PolyhedralViewpoint{ ViewDim4, m_min_coord, m_max_coord, look_at_coord, ViewDir };
+const auto Viewpoint5 = InSituVis::PolyhedralViewpoint{ ViewDim5, m_min_coord, m_max_coord, look_at_coord, ViewDir };
+
+} // end of namespace Params
 
 /*****************************************************************************/
-
-
 
 namespace local
 {
@@ -101,7 +109,7 @@ class InSituVis : public ::Adaptor
 public:
     static Pipeline WholeMinMaxValues();
     static Pipeline OrthoSlice();
-    static Pipeline Isosurface();
+    static Pipeline Isosurface(const kvs::mpi::Communicator& world);
     static Pipeline ExternalFace( const kvs::mpi::Communicator& world );
     static Pipeline StochasticRendering( const size_t repeats );
 
@@ -116,6 +124,16 @@ private:
 public:
     InSituVis( const MPI_Comm world = MPI_COMM_WORLD, const int root = 0 ): BaseClass( world, root )
     {
+        // 1. Output Path Setting (from Sample Code)
+        //--------------------------------------------------------------------
+        {
+            std::string base_dir =  "/data2/tomoya/OralAirFlow/test3.0";
+            std::string sub_dir  = "Process";
+
+            this->outputDirectory().setBaseDirectoryName( base_dir );
+            this->outputDirectory().setSubDirectoryName( sub_dir );
+        }
+
         // Common parameters.
         this->setImageSize( Params::ImageSize.x(), Params::ImageSize.y() );
         this->setOutputImageEnabled( Params::Output::Image );
@@ -137,19 +155,20 @@ public:
 #elif defined( IN_SITU_VIS__PIPELINE__ORTHO_SLICE )
         this->setPipeline( local::InSituVis::OrthoSlice() );
 #elif defined( IN_SITU_VIS__PIPELINE__ISOSURFACE )
-        this->setPipeline( local::InSituVis::Isosurface() );
+        this->setPipeline( local::InSituVis::Isosurface( BaseClass::world() ) );
 #elif defined( IN_SITU_VIS__PIPELINE__EXTERNAL_FACE )
         this->setPipeline( local::InSituVis::ExternalFace( BaseClass::world() ) );
 #endif
 
-        // Set viewpoint(s)
-#if defined( IN_SITU_VIS__VIEWPOINT__SINGLE )
-        this->setViewpoint( Params::Viewpoint );
-#elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE_CUBIC )
-        this->setViewpoint( Params::ViewpointCubic );
-#elif defined( IN_SITU_VIS__VIEWPOINT__MULTIPLE_SPHERICAL )
-        this->setViewpoint( Params::ViewpointSpherical );
-#endif
+        // 2. Multiple Viewpoints Registration (from Sample Code)
+        //--------------------------------------------------------------------
+        // 以前の #if defined マクロによる単一視点登録を廃止し、複数を登録します。
+        // 第2引数の文字列がサブディレクトリ名として使用されます。
+        this->addViewpoint( Params::Viewpoint1, "181" );
+        this->addViewpoint( Params::Viewpoint2, "182" );
+        this->addViewpoint( Params::Viewpoint3, "142" );
+        this->addViewpoint( Params::Viewpoint4, "143" );
+        this->addViewpoint( Params::Viewpoint5, "1201" );
     }
 
     kvs::mpi::StampTimer& simTimer() { return m_sim_timer; }
@@ -391,7 +410,7 @@ public:
 
 inline InSituVis::Pipeline InSituVis::OrthoSlice()
 {
-    return [&] ( Screen& screen, const Object& object )
+    return [&] ( Screen& screen, const Object& object, const std::string& base_dir, int time_step )
     {
         Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
@@ -450,9 +469,9 @@ inline InSituVis::Pipeline InSituVis::OrthoSlice()
     };
 }
 
-inline InSituVis::Pipeline InSituVis::Isosurface()
+inline InSituVis::Pipeline InSituVis::Isosurface(const kvs::mpi::Communicator& comm )
 {
-    return [&] ( Screen& screen, const Object& object )
+    return [comm] ( Screen& screen, const Object& object, const std::string& base_dir, int time_step )
     {
         Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
@@ -518,12 +537,138 @@ inline InSituVis::Pipeline InSituVis::Isosurface()
                 screen.registerObject( mesh, renderer );
             }
         }
+
+        // ───────────────────────────────────────────────────────────
+        // (2) ここから「視点に関わらず１回だけ行う処理」。
+        //     Isosurface (Object0, Object1, Object2) をシーンから探して
+        //     coords/colors/normals を取り出し、JSON ファイルへ書き出す
+        // ───────────────────────────────────────────────────────────
+        {
+            std::vector<kvs::Vec3> all_coords;
+            std::vector<kvs::RGBColor> all_colors;
+            std::vector<kvs::Vec3> all_normals;
+
+            int isosurface_count = 0;
+
+            const auto& om = screen.scene()->objectManager();
+            const int nobjects = om->numberOfObjects();
+            for ( int i = 0; i < nobjects; ++i )
+            {
+                kvs::ObjectBase* obj = om->object( i );
+                auto* poly = dynamic_cast<kvs::PolygonObject*>( obj );
+                
+                // 名前で判定 (Object0, Object1, Object2 などが含まれるか)
+                // BoundaryMeshは除外
+                if ( poly && ( poly->name().find( "Object" ) != std::string::npos ) && ( poly->name().find("BoundaryMesh") == std::string::npos ) )
+                {
+                    const auto& coords  = poly->coords();
+                    const auto& colors  = poly->colors();
+                    const auto& normals = poly->normals();
+
+                    for ( size_t vi = 0; vi + 2 < coords.size(); vi += 3 )
+                    {
+                        kvs::Vec3 p_obj( coords[vi], coords[vi+1], coords[vi+2] );
+                        kvs::Vec3 p_wld = kvs::ObjectCoordinate( p_obj, poly ).toWorldCoordinate().position();
+                        all_coords.push_back( p_wld );
+                    }
+                    for ( size_t vi = 0; vi + 2 < colors.size(); vi += 3 )
+                    {
+                        all_colors.emplace_back( colors[vi], colors[vi+1], colors[vi+2] );
+                    }
+                    for ( size_t vi = 0; vi + 2 < normals.size(); vi += 3 )
+                    {
+                        kvs::Vec3 n_obj(normals[vi], normals[vi + 1], normals[vi + 2]);
+                        kvs::Vec3 n_wld = kvs::ObjectCoordinate(n_obj, poly).toWorldCoordinate().position();
+                        all_normals.push_back(n_wld);
+                    }
+
+                    ++isosurface_count;
+                }
+            }
+
+            const int rank = comm.rank();
+            std::cout << "[Rank " << rank << "] Found " << isosurface_count
+                    << " Isosurface object(s), merged " << all_coords.size()
+                    << " vertices.\n";
+
+            if ( isosurface_count > 0 )
+            {
+                const std::string params_dir = base_dir + "/params";
+                const std::string step_str = kvs::String::From( time_step, 6, '0' );
+                const std::string rank_str = kvs::String::From( rank, 3, '0' );
+                const std::string json_path = params_dir + "/isosurf_" + step_str + "_rank" + rank_str + ".json";
+                
+                // ディレクトリ作成
+                {
+                    struct stat st;
+                    if ( ::stat( params_dir.c_str(), &st ) != 0 )
+                    {
+                        if ( ::mkdir( params_dir.c_str(), 0755 ) != 0 )
+                        {
+                            std::cerr << "Warning: Failed to create directory " << params_dir << "\n";
+                        }
+                    }
+                }
+
+                std::ofstream ofs( json_path );
+                if ( !ofs.is_open() )
+                {
+                    std::cerr << "Error: Cannot open " << json_path << " for writing.\n";
+                }
+                else
+                {
+                    ofs << "{\n";
+                    ofs << "  \"time_step\": " << time_step << ",\n";
+                    ofs << "  \"rank\": " << rank << ",\n";
+
+                    ofs << "  \"coords\": [\n";
+                    for ( size_t i = 0; i < all_coords.size(); ++i )
+                    {
+                        const auto& v = all_coords[i];
+                        ofs << "    [" << v.x() << ", " << v.y() << ", " << v.z() << "]";
+                        if ( i + 1 < all_coords.size() ) ofs << ",";
+                        ofs << "\n";
+                    }
+                    ofs << "  ],\n";
+
+                    ofs << "  \"colors\": [\n";
+                    for ( size_t i = 0; i < all_colors.size(); ++i )
+                    {
+                        const auto& c = all_colors[i];
+                        ofs << "    [" << static_cast<int>(c.r()) << ", "
+                                    << static_cast<int>(c.g()) << ", "
+                                    << static_cast<int>(c.b()) << "]";
+                        if ( i + 1 < all_colors.size() ) ofs << ",";
+                        ofs << "\n";
+                    }
+                    ofs << "  ],\n";
+
+                    ofs << "  \"normals\": [\n";
+                    for ( size_t i = 0; i < all_normals.size(); ++i )
+                    {
+                        const auto& n = all_normals[i];
+                        ofs << "    [" << n.x() << ", " << n.y() << ", " << n.z() << "]";
+                        if ( i + 1 < all_normals.size() ) ofs << ",";
+                        ofs << "\n";
+                    }
+                    ofs << "  ]\n";
+
+                    ofs << "}\n";
+                    ofs.close();
+
+                    std::cout << "Wrote merged isosurface data to " << json_path << "\n";
+                }
+            }
+        }
+        // ───────────────────────────────────────────────────────────
+        // (2) の処理 終わり
+        // ───────────────────────────────────────────────────────────
     };
 }
 
 inline InSituVis::Pipeline InSituVis::ExternalFace( const kvs::mpi::Communicator& world )
 {
-    return [world] ( Screen& screen, const Object& object )
+    return [world] ( Screen& screen, const Object& object, const std::string& base_dir, int time_step )
     {
         Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
@@ -564,7 +709,7 @@ inline InSituVis::Pipeline InSituVis::ExternalFace( const kvs::mpi::Communicator
 
 inline InSituVis::Pipeline InSituVis::StochasticRendering( const size_t repeats )
 {
-    return [repeats] ( Screen& screen, const Object& object )
+    return [repeats] ( Screen& screen, const Object& object, const std::string& base_dir, int time_step )
     {
         Volume volume; volume.shallowCopy( Volume::DownCast( object ) );
         if ( volume.numberOfCells() == 0 ) { return; }
