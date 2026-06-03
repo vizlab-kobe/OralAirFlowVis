@@ -43,7 +43,6 @@ EXE_LIBS += \
 
 /* InSitu settings */
 EXE_INC += -I$(HOME)/Work/GitHub
-EXE_LIBS += -L$(HOME)/Work/GiHhub/InSituVis/Lib -lInSituVis
 
 /* OpenMP settings */
 EXE_INC += -fopenmp
