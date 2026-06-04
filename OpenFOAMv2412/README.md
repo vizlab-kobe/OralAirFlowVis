@@ -32,7 +32,7 @@ $ wclean && wmake
 
 次に解析ディレクトリに移動し実行します．
 ```
-$ cd ../realistic3
+$ cd ../realistic-s3
 $ chmod +x run_insitu.sh
 $ ./run_insitu.sh
 ```
