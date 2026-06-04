@@ -4,7 +4,7 @@ OralAirFlowをOpenFOAM v2412で動作させるためのドキュメントです�
 
 まずはOralAirFlowVisを入手します．
 ``` 
-$ cd ~/Work/Github
+$ cd ~/Work/GitHub
 $ git clone https://github.com/vizlab-kobe/OralAirFlowVis.git
 $ cd OralAirFlowVis
 ```
