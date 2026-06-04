@@ -262,8 +262,8 @@ EXE_LIBS = \
 +    -lEGL -lGL
 
 /* InSitu settings */
-+EXE_INC += -I$(HOME)/Work/Github
-+EXE_LIBS += -L$(HOME)/Work/Github/InSituVis/Lib -lInSituVis
++EXE_INC += -I$(HOME)/Work/GitHub
++EXE_LIBS += -L$(HOME)/Work/GitHub/InSituVis/Lib -lInSituVis
 
 /* OpenMP settings */
 +EXE_INC += -fopenmp
@@ -294,8 +294,8 @@ EXE_LIBS = \
 +        -L$(KVS_LIB_DIR) -lkvs
 
 +/* InSitu settings */
-+EXE_INC += -I$(HOME)/Work/Github
-+EXE_LIBS += -L$(HOME)/Work/Github/InSituVis/Lib -lInSituVis
++EXE_INC += -I$(HOME)/Work/GitHub
++EXE_LIBS += -L$(HOME)/Work/GitHub/InSituVis/Lib -lInSituVis
 
 +/* OpenMP settings */
 +EXE_INC += -fopenmp
@@ -398,5 +398,5 @@ $ ./run_insitu.sh
 
 ### 実行結果の例
 
-<img width="512" height="512" alt="OralAirFlowVis" src="https://github.com/user-attachments/assets/b6fc3d9b-23ce-46cc-9ca9-892fb14936d5" />
+<img width="512" height="512" alt="OralAirFlowVis" src="https://GitHub.com/user-attachments/assets/b6fc3d9b-23ce-46cc-9ca9-892fb14936d5" />
 
